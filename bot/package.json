@@ -1,0 +1,12 @@
+{
+  "name": "crazyland-discord-bot",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node discord-bot.js"
+  },
+  "dependencies": {
+    "discord.js": "^14.21.0"
+  }
+}
