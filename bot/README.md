@@ -5,19 +5,22 @@ This bot syncs Discord giveaway management with the website feed in `data/giveaw
 ## Current features
 
 - Registers guild slash commands automatically on startup
-- Creates giveaways with ids, status, timestamps, and optional prize text
+- Creates giveaway messages with Discord entry buttons
 - Lists current giveaways
-- Ends giveaways and publishes winners
+- Ends giveaways and automatically picks winners from entrants
 - Updates giveaway status
 - Removes giveaways from the site feed
+- Supports rerolling winners
+- Stores giveaway message ids, host ids, entrants, and winner ids
 
 ## Commands
 
-- `/giveaway_create title:<text> duration_minutes:<number> prize:<text optional>`
+- `/giveaway_create title:<text> duration_minutes:<number> prize:<text optional> winner_count:<number optional> image_url:<text optional>`
 - `/giveaway_list`
-- `/giveaway_end id:<text> winner:<text>`
+- `/giveaway_end id:<text>`
 - `/giveaway_status id:<text> status:<choice>`
 - `/giveaway_remove id:<text>`
+- `/giveaway_reroll id:<text>`
 
 ## Setup
 
@@ -35,5 +38,5 @@ This bot syncs Discord giveaway management with the website feed in `data/giveaw
 ## Important next upgrades
 
 - Add secure persistence with a database instead of JSON if the project grows.
-- Add slash commands for entrant handling and random winner selection.
+- Add scheduled automatic ending when a giveaway reaches its end time.
 - Add a backend API if you want the website to support real Discord login and private user-specific data.

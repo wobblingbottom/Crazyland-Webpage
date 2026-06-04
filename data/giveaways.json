@@ -4,20 +4,39 @@
       "id": "gw-sample-01",
       "title": "Sketch Portrait Giveaway",
       "prize": "One stylized portrait",
+      "imageUrl": "",
       "status": "Active",
       "winner": "",
+      "winnerIds": [],
+      "winnerCount": 1,
+      "hostId": "000000000000000001",
+      "entrantIds": [],
       "createdAt": "2026-06-03T12:00:00.000Z",
-      "endsAt": "2026-06-10T12:00:00.000Z"
+      "endsAt": "2026-06-10T12:00:00.000Z",
+      "channelId": "000000000000000001",
+      "messageId": "000000000000000001"
     },
     {
       "id": "gw-sample-02",
       "title": "Comic Cover Slot",
       "prize": "One custom cover illustration",
+      "imageUrl": "",
       "status": "Winner Selected",
       "winner": "Client B",
+      "winnerIds": [
+        "000000000000000002"
+      ],
+      "winnerCount": 1,
+      "hostId": "000000000000000001",
+      "entrantIds": [
+        "000000000000000002",
+        "000000000000000003"
+      ],
       "createdAt": "2026-05-20T12:00:00.000Z",
       "endsAt": "2026-05-27T12:00:00.000Z",
-      "endedAt": "2026-05-27T13:00:00.000Z"
+      "endedAt": "2026-05-27T13:00:00.000Z",
+      "channelId": "000000000000000001",
+      "messageId": "000000000000000002"
     }
   ]
 }
