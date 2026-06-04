@@ -62,15 +62,15 @@ const commands = [
     .addStringOption((option) =>
       option.setName("title").setDescription("Giveaway title").setRequired(true)
     )
-    .addStringOption((option) =>
-      option.setName("prize").setDescription("Prize or reward").setRequired(false)
-    )
     .addIntegerOption((option) =>
       option
         .setName("duration_minutes")
         .setDescription("How long the giveaway stays active")
         .setRequired(true)
         .setMinValue(1)
+    )
+    .addStringOption((option) =>
+      option.setName("prize").setDescription("Prize or reward").setRequired(false)
     ),
   new SlashCommandBuilder()
     .setName("giveaway_list")
