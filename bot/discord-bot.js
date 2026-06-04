@@ -205,7 +205,7 @@ const buildGiveawayComponents = (giveaway) => {
           `**Hosted By**\n<@${giveaway.hostId}>`
         )
       )
-      .setPrimaryButtonAccessory(
+      .setButtonAccessory(
         new ButtonBuilder()
           .setCustomId(`giveaway_enter:${giveaway.id}`)
           .setLabel(`Enter (${giveaway.entrantIds.length})`)
@@ -300,12 +300,12 @@ client.on("interactionCreate", async (interaction) => {
       const giveaway = data.giveaways.find((item) => item.id === giveawayId);
 
       if (!giveaway) {
-        await interaction.reply({ content: "This giveaway no longer exists.", ephemeral: true });
+        await interaction.reply({ content: "This giveaway no longer exists.", flags: MessageFlags.Ephemeral });
         return;
       }
 
       if (giveaway.status !== "Active") {
-        await interaction.reply({ content: "This giveaway is not accepting entries right now.", ephemeral: true });
+        await interaction.reply({ content: "This giveaway is not accepting entries right now.", flags: MessageFlags.Ephemeral });
         return;
       }
 
@@ -314,14 +314,14 @@ client.on("interactionCreate", async (interaction) => {
       }
 
       if (giveaway.entrantIds.includes(interaction.user.id)) {
-        await interaction.reply({ content: "You are already entered in this giveaway.", ephemeral: true });
+        await interaction.reply({ content: "You are already entered in this giveaway.", flags: MessageFlags.Ephemeral });
         return;
       }
 
       giveaway.entrantIds.push(interaction.user.id);
       writeGiveaways(data);
       await syncGiveawayMessage(giveaway);
-      await interaction.reply({ content: `You are entered in "${giveaway.title}".`, ephemeral: true });
+      await interaction.reply({ content: `You are entered in "${giveaway.title}".`, flags: MessageFlags.Ephemeral });
       return;
     }
 
@@ -332,7 +332,7 @@ client.on("interactionCreate", async (interaction) => {
     const data = readGiveaways();
 
     if (interaction.commandName === "giveaway_create") {
-      await interaction.deferReply({ ephemeral: true });
+      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
       const title = interaction.options.getString("title", true);
       const durationMinutes = interaction.options.getInteger("duration_minutes", true);
@@ -400,7 +400,7 @@ client.on("interactionCreate", async (interaction) => {
       const giveaway = data.giveaways.find((item) => item.id === id);
 
       if (!giveaway) {
-        await interaction.reply({ content: `No giveaway found for id \`${id}\`.`, ephemeral: true });
+        await interaction.reply({ content: `No giveaway found for id \`${id}\`.`, flags: MessageFlags.Ephemeral });
         return;
       }
 
@@ -426,7 +426,7 @@ client.on("interactionCreate", async (interaction) => {
       const giveaway = data.giveaways.find((item) => item.id === id);
 
       if (!giveaway) {
-        await interaction.reply({ content: `No giveaway found for id \`${id}\`.`, ephemeral: true });
+        await interaction.reply({ content: `No giveaway found for id \`${id}\`.`, flags: MessageFlags.Ephemeral });
         return;
       }
 
@@ -444,7 +444,7 @@ client.on("interactionCreate", async (interaction) => {
       const nextGiveaways = data.giveaways.filter((item) => item.id !== id);
 
       if (!giveaway || nextGiveaways.length === data.giveaways.length) {
-        await interaction.reply({ content: `No giveaway found for id \`${id}\`.`, ephemeral: true });
+        await interaction.reply({ content: `No giveaway found for id \`${id}\`.`, flags: MessageFlags.Ephemeral });
         return;
       }
 
@@ -458,7 +458,7 @@ client.on("interactionCreate", async (interaction) => {
       const giveaway = data.giveaways.find((item) => item.id === id);
 
       if (!giveaway) {
-        await interaction.reply({ content: `No giveaway found for id \`${id}\`.`, ephemeral: true });
+        await interaction.reply({ content: `No giveaway found for id \`${id}\`.`, flags: MessageFlags.Ephemeral });
         return;
       }
 
@@ -468,7 +468,7 @@ client.on("interactionCreate", async (interaction) => {
       const winners = pickWinners(remainingEntrants, giveaway.winnerCount || 1);
 
       if (winners.length === 0) {
-        await interaction.reply({ content: "No remaining entrants available for reroll.", ephemeral: true });
+        await interaction.reply({ content: "No remaining entrants available for reroll.", flags: MessageFlags.Ephemeral });
         return;
       }
 
@@ -489,7 +489,7 @@ client.on("interactionCreate", async (interaction) => {
       if (interaction.deferred || interaction.replied) {
         await interaction.editReply(message).catch(() => {});
       } else {
-        await interaction.reply({ content: message, ephemeral: true }).catch(() => {});
+        await interaction.reply({ content: message, flags: MessageFlags.Ephemeral }).catch(() => {});
       }
     }
   }
