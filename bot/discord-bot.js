@@ -240,12 +240,6 @@ const buildGiveawayComponents = (giveaway) => {
 
   const actionRow = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
-      .setCustomId(`giveaway_enter:${giveaway.id}`)
-      .setLabel("Enter")
-      .setStyle(ButtonStyle.Success)
-      .setEmoji("🎉")
-      .setDisabled(giveaway.status !== "Active"),
-    new ButtonBuilder()
       .setLabel("View Giveaway")
       .setStyle(ButtonStyle.Link)
       .setURL(viewUrl)
