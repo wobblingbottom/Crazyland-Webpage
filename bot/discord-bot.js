@@ -203,7 +203,7 @@ const buildGiveawayComponents = (giveaway) => {
 
   container.addTextDisplayComponents(
     new TextDisplayBuilder().setContent(
-      `### Description\n${giveaway.description || "No description provided."}`
+      `${giveaway.description || "No description provided."}`
     )
   );
 
