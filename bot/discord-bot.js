@@ -192,7 +192,7 @@ const buildGiveawayComponents = (giveaway) => {
     ? createMessageUrl(config.guildId, giveaway.channelId, giveaway.messageId)
     : "https://discord.com/channels/@me";
 
-  const container = new ContainerBuilder().setAccentColor(0x5865f2);
+  const container = new ContainerBuilder();
 
   container.addTextDisplayComponents(
     new TextDisplayBuilder().setContent(`# ${giveaway.title}`)
