@@ -174,36 +174,45 @@ const writeSettings = (settings) => {
 
 const buildPanelComponents = (channelId) => {
   const configuredLine = channelId
-    ? `Configured giveaway channel: <#${channelId}>`
-    : "Configured giveaway channel: Not set";
+    ? `Current: <#${channelId}>`
+    : "Current: Not set";
 
   const container = new ContainerBuilder();
   container.addTextDisplayComponents(
-    new TextDisplayBuilder().setContent("# Giveaway Setup Panel"),
+    new TextDisplayBuilder().setContent("# Setup Manager"),
+    new TextDisplayBuilder().setContent("---"),
     new TextDisplayBuilder().setContent(
       "Use this panel to choose where giveaway messages and winner announcements should be posted."
     ),
+    new TextDisplayBuilder().setContent("## Giveaway Channel"),
     new TextDisplayBuilder().setContent(configuredLine)
   );
   container.addSeparatorComponents(new SeparatorBuilder().setDivider(true));
   container.addTextDisplayComponents(
     new TextDisplayBuilder().setContent(
-      "Click the button below in the channel you want to use for giveaways."
+      "Press the buttons below in the channel you want to use."
     )
   );
 
-  const actionRow = new ActionRowBuilder().addComponents(
-    new ButtonBuilder()
-      .setCustomId("panel_set_giveaway_channel")
-      .setLabel("Use This Channel")
-      .setStyle(ButtonStyle.Primary),
+  const refreshRow = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
       .setCustomId("panel_refresh")
       .setLabel("Refresh Panel")
       .setStyle(ButtonStyle.Secondary)
   );
 
-  return [container, actionRow];
+  const channelRow = new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId("panel_set_giveaway_channel")
+      .setLabel("Use This Channel")
+      .setStyle(ButtonStyle.Primary),
+    new ButtonBuilder()
+      .setCustomId("panel_clear_giveaway_channel")
+      .setLabel("Clear Giveaway Channel")
+      .setStyle(ButtonStyle.Secondary)
+  );
+
+  return [container, refreshRow, channelRow];
 };
 
 const updatePanelMessage = async (interactionOrMessage) => {
@@ -398,6 +407,14 @@ client.on("interactionCreate", async (interaction) => {
       }
 
       if (action === "panel_refresh") {
+        await updatePanelMessage(interaction);
+        return;
+      }
+
+      if (action === "panel_clear_giveaway_channel") {
+        const settings = readSettings();
+        settings.giveawayChannelId = "";
+        writeSettings(settings);
         await updatePanelMessage(interaction);
         return;
       }
