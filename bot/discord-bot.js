@@ -181,11 +181,24 @@ const buildPanelComponents = (channelId) => {
 
   const container = new ContainerBuilder();
   container.addTextDisplayComponents(
-    new TextDisplayBuilder().setContent("# Doctor Panel"),
-    new TextDisplayBuilder().setContent("## Giveaway Channel"),
-    new TextDisplayBuilder().setContent(configuredLine),
+    new TextDisplayBuilder().setContent("### Doctor Panel"),
+    new TextDisplayBuilder().setContent("### Giveaway Channel"),
     new TextDisplayBuilder().setContent("Choose which channel should receive giveaway posts and winner announcements.")
   );
+
+  container.addSectionComponents(
+    new SectionBuilder()
+      .addTextDisplayComponents(
+        new TextDisplayBuilder().setContent(configuredLine)
+      )
+      .setButtonAccessory(
+        new ButtonBuilder()
+          .setCustomId("panel_clear_giveaway_channel")
+          .setLabel("Clear Channel")
+          .setStyle(ButtonStyle.Secondary)
+      )
+  );
+
   container.addSeparatorComponents(new SeparatorBuilder().setDivider(true));
 
   const selectRow = new ActionRowBuilder().addComponents(
@@ -197,14 +210,7 @@ const buildPanelComponents = (channelId) => {
       .setMaxValues(1)
   );
 
-  const clearRow = new ActionRowBuilder().addComponents(
-    new ButtonBuilder()
-      .setCustomId("panel_clear_giveaway_channel")
-      .setLabel("Clear Channel")
-      .setStyle(ButtonStyle.Secondary)
-  );
-
-  return [container, selectRow, clearRow];
+  return [container, selectRow];
 };
 
 const updatePanelMessage = async (interactionOrMessage) => {
