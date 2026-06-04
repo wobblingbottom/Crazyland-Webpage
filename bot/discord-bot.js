@@ -71,6 +71,9 @@ const commands = [
     .addStringOption((option) =>
       option.setName("title").setDescription("Giveaway title").setRequired(true)
     )
+    .addStringOption((option) =>
+      option.setName("description").setDescription("Short giveaway description").setRequired(true)
+    )
     .addIntegerOption((option) =>
       option
         .setName("duration_minutes")
@@ -195,14 +198,17 @@ const buildGiveawayComponents = (giveaway) => {
     new TextDisplayBuilder().setContent(`# ${giveaway.title}`)
   );
 
+  container.addTextDisplayComponents(
+    new TextDisplayBuilder().setContent(
+      `### Description\n${giveaway.description || "No description provided."}`
+    )
+  );
+
   container.addSectionComponents(
     new SectionBuilder()
       .addTextDisplayComponents(
         new TextDisplayBuilder().setContent(
-          `**Time Remaining**\n<t:${toUnix(giveaway.endsAt)}:R> (${giveaway.status})`
-        ),
-        new TextDisplayBuilder().setContent(
-          `**Hosted By**\n<@${giveaway.hostId}>`
+          `**Time remaining:**\n<t:${toUnix(giveaway.endsAt)}:R>`
         )
       )
       .setButtonAccessory(
@@ -228,13 +234,7 @@ const buildGiveawayComponents = (giveaway) => {
 
   container.addTextDisplayComponents(
     new TextDisplayBuilder().setContent(
-      `**Prize**\n${giveaway.prize || "Mystery reward"}`
-    ),
-    new TextDisplayBuilder().setContent(
-      `**Winners**\n${giveaway.winnerCount} winner(s) | Ends At <t:${toUnix(giveaway.endsAt)}:F>`
-    ),
-    new TextDisplayBuilder().setContent(
-      `**Current Winner(s)**\n${formatWinnerLine(giveaway)}`
+      `Winners: ${giveaway.winnerCount} | Ends: <t:${toUnix(giveaway.endsAt)}:f>`
     )
   );
 
@@ -329,6 +329,7 @@ client.on("interactionCreate", async (interaction) => {
       await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
       const title = interaction.options.getString("title", true);
+      const description = interaction.options.getString("description", true);
       const durationMinutes = interaction.options.getInteger("duration_minutes", true);
       const prize = interaction.options.getString("prize") || "";
       const winnerCount = interaction.options.getInteger("winner_count") || 1;
@@ -339,6 +340,7 @@ client.on("interactionCreate", async (interaction) => {
       const giveaway = {
         id: createGiveawayId(),
         title,
+        description,
         prize,
         imageUrl,
         status: "Active",
