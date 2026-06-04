@@ -185,18 +185,33 @@ const buildPanelComponents = (channelId) => {
   );
   container.addSeparatorComponents(new SeparatorBuilder().setDivider(true));
 
-  const channelRow = new ActionRowBuilder().addComponents(
-    new ButtonBuilder()
-      .setCustomId("panel_set_giveaway_channel")
-      .setLabel("Select Channel")
-      .setStyle(ButtonStyle.Primary),
-    new ButtonBuilder()
-      .setCustomId("panel_clear_giveaway_channel")
-      .setLabel("Clear Channel")
-      .setStyle(ButtonStyle.Secondary)
+  container.addSectionComponents(
+    new SectionBuilder()
+      .addTextDisplayComponents(
+        new TextDisplayBuilder().setContent("Select this channel for giveaway posts and winner announcements.")
+      )
+      .setButtonAccessory(
+        new ButtonBuilder()
+          .setCustomId("panel_set_giveaway_channel")
+          .setLabel("Select Channel")
+          .setStyle(ButtonStyle.Primary)
+      )
   );
 
-  return [container, channelRow];
+  container.addSectionComponents(
+    new SectionBuilder()
+      .addTextDisplayComponents(
+        new TextDisplayBuilder().setContent("Clear the saved giveaway channel setting.")
+      )
+      .setButtonAccessory(
+        new ButtonBuilder()
+          .setCustomId("panel_clear_giveaway_channel")
+          .setLabel("Clear Channel")
+          .setStyle(ButtonStyle.Secondary)
+      )
+  );
+
+  return [container];
 };
 
 const updatePanelMessage = async (interactionOrMessage) => {
