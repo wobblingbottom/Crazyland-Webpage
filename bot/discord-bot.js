@@ -219,7 +219,6 @@ const buildGiveawayComponents = (giveaway) => {
           .setCustomId(`giveaway_enter:${giveaway.id}`)
           .setLabel(`Enter (${giveaway.entrantIds.length})`)
           .setStyle(ButtonStyle.Success)
-          .setEmoji("🎉")
           .setDisabled(giveaway.status !== "Active")
       )
   );
