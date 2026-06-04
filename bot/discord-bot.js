@@ -335,7 +335,6 @@ const buildGiveawayComponents = (giveaway) => {
       .setLabel("View Giveaway")
       .setStyle(ButtonStyle.Link)
       .setURL(viewUrl)
-    )
   );
 
   return [container, actionRow];
