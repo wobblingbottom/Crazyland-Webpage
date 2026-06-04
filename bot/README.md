@@ -28,6 +28,7 @@ This bot syncs Discord giveaway management with the website feed in `data/giveaw
 2. Fill in your Discord bot token, client id, and guild id.
 3. Run `npm install` inside `bot/`.
 4. Start the bot with `npm start`.
+5. Optionally set `DEFAULT_BANNER_URL` if you want a default giveaway banner.
 
 ## How the site connection works
 

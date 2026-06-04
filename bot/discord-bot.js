@@ -61,7 +61,10 @@ const config = {
   token: process.env.BOT_TOKEN,
   clientId: process.env.CLIENT_ID,
   guildId: process.env.GUILD_ID,
-  dataFile: resolve(rootDir, process.env.GIVEAWAYS_FILE || "data/giveaways.json")
+  dataFile: resolve(rootDir, process.env.GIVEAWAYS_FILE || "data/giveaways.json"),
+  defaultBannerUrl:
+    process.env.DEFAULT_BANNER_URL ||
+    "https://raw.githubusercontent.com/wobblingbottom/Crazyland-Webpage/main/banner.png"
 };
 
 const commands = [
@@ -333,7 +336,7 @@ client.on("interactionCreate", async (interaction) => {
       const durationMinutes = interaction.options.getInteger("duration_minutes", true);
       const prize = interaction.options.getString("prize") || "";
       const winnerCount = interaction.options.getInteger("winner_count") || 1;
-      const imageUrl = interaction.options.getString("image_url") || "";
+      const imageUrl = interaction.options.getString("image_url") || config.defaultBannerUrl;
       const createdAt = new Date();
       const endsAt = new Date(createdAt.getTime() + durationMinutes * 60 * 1000);
 
