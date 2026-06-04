@@ -62,6 +62,7 @@ const config = {
   clientId: process.env.CLIENT_ID,
   guildId: process.env.GUILD_ID,
   dataFile: resolve(rootDir, process.env.GIVEAWAYS_FILE || "data/giveaways.json"),
+  settingsFile: resolve(rootDir, process.env.BOT_SETTINGS_FILE || "data/bot-config.json"),
   defaultBannerUrl:
     process.env.DEFAULT_BANNER_URL ||
     "https://raw.githubusercontent.com/wobblingbottom/Crazyland-Webpage/main/banner.png"
@@ -139,30 +140,120 @@ const commands = [
     .setDescription("Pick a new winner from the existing entrants.")
     .addStringOption((option) =>
       option.setName("id").setDescription("Giveaway id").setRequired(true)
-    )
+    ),
+  new SlashCommandBuilder()
+    .setName("panel")
+    .setDescription("Post a giveaway setup panel in the current channel.")
 ];
 
-const ensureDataFile = () => {
-  const dataDir = dirname(config.dataFile);
+const ensureJsonFile = (filePath, defaultContents) => {
+  const dataDir = dirname(filePath);
 
   if (!existsSync(dataDir)) {
     mkdirSync(dataDir, { recursive: true });
   }
 
-  if (!existsSync(config.dataFile)) {
-    writeFileSync(config.dataFile, '{\n  "giveaways": []\n}\n', "utf8");
+  if (!existsSync(filePath)) {
+    writeFileSync(filePath, `${JSON.stringify(defaultContents, null, 2)}\n`, "utf8");
   }
 };
 
-const readGiveaways = () => {
-  ensureDataFile();
-  const raw = readFileSync(config.dataFile, "utf8");
-  const parsed = JSON.parse(raw);
-  return Array.isArray(parsed.giveaways) ? parsed : { giveaways: [] };
+const ensureSettingsFile = () => {
+  ensureJsonFile(config.settingsFile, { giveawayChannelId: "" });
 };
 
-const writeGiveaways = (data) => {
-  writeFileSync(config.dataFile, `${JSON.stringify(data, null, 2)}\n`, "utf8");
+const readSettings = () => {
+  ensureSettingsFile();
+  const raw = readFileSync(config.settingsFile, "utf8");
+  return JSON.parse(raw);
+};
+
+const writeSettings = (settings) => {
+  writeFileSync(config.settingsFile, `${JSON.stringify(settings, null, 2)}\n`, "utf8");
+};
+
+const buildPanelComponents = (channelId) => {
+  const configuredLine = channelId
+    ? `Configured giveaway channel: <#${channelId}>`
+    : "Configured giveaway channel: Not set";
+
+  const container = new ContainerBuilder();
+  container.addTextDisplayComponents(
+    new TextDisplayBuilder().setContent("# Giveaway Setup Panel"),
+    new TextDisplayBuilder().setContent(
+      "Use this panel to choose where giveaway messages and winner announcements should be posted."
+    ),
+    new TextDisplayBuilder().setContent(configuredLine)
+  );
+  container.addSeparatorComponents(new SeparatorBuilder().setDivider(true));
+  container.addTextDisplayComponents(
+    new TextDisplayBuilder().setContent(
+      "Click the button below in the channel you want to use for giveaways."
+    )
+  );
+
+  const actionRow = new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId("panel_set_giveaway_channel")
+      .setLabel("Use This Channel")
+      .setStyle(ButtonStyle.Primary),
+    new ButtonBuilder()
+      .setCustomId("panel_refresh")
+      .setLabel("Refresh Panel")
+      .setStyle(ButtonStyle.Secondary)
+  );
+
+  return [container, actionRow];
+};
+
+const updatePanelMessage = async (interactionOrMessage) => {
+  const settings = readSettings();
+  const payload = {
+    flags: MessageFlags.IsComponentsV2,
+    components: buildPanelComponents(settings.giveawayChannelId)
+  };
+
+  if ("update" in interactionOrMessage) {
+    await interactionOrMessage.update(payload);
+    return;
+  }
+
+  await interactionOrMessage.edit(payload);
+};
+
+const ensureDataFile = () => {
+  ensureJsonFile(config.dataFile, { giveaways: [] });
+};
+
+const getGiveawayChannel = async (fallbackChannelId) => {
+  const settings = readSettings();
+  const targetChannelId = settings.giveawayChannelId || fallbackChannelId;
+
+  if (!targetChannelId) {
+    return null;
+  }
+
+  const channel = await client.channels.fetch(targetChannelId);
+  return channel?.isTextBased() ? channel : null;
+};
+
+const announceWinners = async (giveaway) => {
+  if (!giveaway.channelId || !Array.isArray(giveaway.winnerIds)) {
+    return;
+  }
+
+  const channel = await client.channels.fetch(giveaway.channelId);
+
+  if (!channel?.isTextBased()) {
+    return;
+  }
+
+  const winnerLine =
+    giveaway.winnerIds.length > 0
+      ? giveaway.winnerIds.map((id) => `<@${id}>`).join(", ")
+      : "No entrants";
+
+  await channel.send(`Giveaway ended: **${giveaway.title}**\nWinner(s): ${winnerLine}`);
 };
 
 const createGiveawayId = () => `gw-${Date.now().toString(36)}`;
@@ -244,9 +335,21 @@ const buildGiveawayComponents = (giveaway) => {
       .setLabel("View Giveaway")
       .setStyle(ButtonStyle.Link)
       .setURL(viewUrl)
+    )
   );
 
   return [container, actionRow];
+};
+
+const readGiveaways = () => {
+  ensureDataFile();
+  const raw = readFileSync(config.dataFile, "utf8");
+  const parsed = JSON.parse(raw);
+  return Array.isArray(parsed.giveaways) ? parsed : { giveaways: [] };
+};
+
+const writeGiveaways = (data) => {
+  writeFileSync(config.dataFile, `${JSON.stringify(data, null, 2)}\n`, "utf8");
 };
 
 const syncGiveawayMessage = async (giveaway) => {
@@ -286,6 +389,19 @@ client.on("interactionCreate", async (interaction) => {
   try {
     if (interaction.isButton()) {
       const [action, giveawayId] = interaction.customId.split(":");
+
+      if (action === "panel_set_giveaway_channel") {
+        const settings = readSettings();
+        settings.giveawayChannelId = interaction.channelId;
+        writeSettings(settings);
+        await updatePanelMessage(interaction);
+        return;
+      }
+
+      if (action === "panel_refresh") {
+        await updatePanelMessage(interaction);
+        return;
+      }
 
       if (action !== "giveaway_enter") {
         return;
@@ -356,12 +472,16 @@ client.on("interactionCreate", async (interaction) => {
         messageId: ""
       };
 
-      if (!interaction.channel?.isTextBased()) {
-        await interaction.editReply("This command can only be used in a text channel.");
+      const giveawayChannel = await getGiveawayChannel(interaction.channelId);
+
+      if (!giveawayChannel) {
+        await interaction.editReply("No valid giveaway channel is configured. Use /panel first.");
         return;
       }
 
-      const message = await interaction.channel.send({
+      giveaway.channelId = giveawayChannel.id;
+
+      const message = await giveawayChannel.send({
         flags: MessageFlags.IsComponentsV2,
         components: buildGiveawayComponents(giveaway)
       });
@@ -408,6 +528,7 @@ client.on("interactionCreate", async (interaction) => {
       giveaway.endedAt = new Date().toISOString();
       writeGiveaways(data);
       await syncGiveawayMessage(giveaway);
+      await announceWinners(giveaway);
 
       await interaction.reply(
         winners.length > 0
@@ -476,6 +597,24 @@ client.on("interactionCreate", async (interaction) => {
       await syncGiveawayMessage(giveaway);
 
       await interaction.reply(`Rerolled winner(s): ${winners.map((id) => `<@${id}>`).join(", ")}`);
+      return;
+    }
+
+    if (interaction.commandName === "panel") {
+      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+      if (!interaction.channel?.isTextBased()) {
+        await interaction.editReply("This command can only be used in a text channel.");
+        return;
+      }
+
+      const settings = readSettings();
+      await interaction.channel.send({
+        flags: MessageFlags.IsComponentsV2,
+        components: buildPanelComponents(settings.giveawayChannelId)
+      });
+
+      await interaction.editReply("Setup panel posted in this channel.");
     }
   } catch (error) {
     console.error("Interaction handling failed:", error);
@@ -494,6 +633,7 @@ client.on("interactionCreate", async (interaction) => {
 
 const bootstrap = async () => {
   ensureDataFile();
+  ensureSettingsFile();
   await registerCommands();
   await client.login(config.token);
 };

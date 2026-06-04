@@ -12,15 +12,17 @@ This bot syncs Discord giveaway management with the website feed in `data/giveaw
 - Removes giveaways from the site feed
 - Supports rerolling winners
 - Stores giveaway message ids, host ids, entrants, and winner ids
+- Includes a `/panel` setup flow for the giveaway announcement channel
 
 ## Commands
 
-- `/giveaway_create title:<text> duration_minutes:<number> prize:<text optional> winner_count:<number optional> image_url:<text optional>`
+- `/giveaway_create title:<text> description:<text> duration_minutes:<number> prize:<text optional> winner_count:<number optional> image_url:<text optional>`
 - `/giveaway_list`
 - `/giveaway_end id:<text>`
 - `/giveaway_status id:<text> status:<choice>`
 - `/giveaway_remove id:<text>`
 - `/giveaway_reroll id:<text>`
+- `/panel`
 
 ## Setup
 
@@ -29,11 +31,13 @@ This bot syncs Discord giveaway management with the website feed in `data/giveaw
 3. Run `npm install` inside `bot/`.
 4. Start the bot with `npm start`.
 5. Optionally set `DEFAULT_BANNER_URL` if you want a default giveaway banner.
+6. Use `/panel` in Discord and click `Use This Channel` where giveaways should be posted.
 
 ## How the site connection works
 
 - The website reads `data/giveaways.json`.
 - The bot writes updates into that same file.
+- The bot stores the configured giveaway channel in `data/bot-config.json`.
 - Any time the JSON changes, the site feed can show the latest giveaways and winners.
 
 ## Important next upgrades
