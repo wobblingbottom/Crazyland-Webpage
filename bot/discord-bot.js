@@ -5,6 +5,8 @@ import {
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
+  ChannelSelectMenuBuilder,
+  ChannelType,
   Client,
   ContainerBuilder,
   GatewayIntentBits,
@@ -188,30 +190,27 @@ const buildPanelComponents = (channelId) => {
   container.addSectionComponents(
     new SectionBuilder()
       .addTextDisplayComponents(
-        new TextDisplayBuilder().setContent("Select this channel for giveaway posts and winner announcements.")
-      )
-      .setButtonAccessory(
-        new ButtonBuilder()
-          .setCustomId("panel_set_giveaway_channel")
-          .setLabel("Select Channel")
-          .setStyle(ButtonStyle.Primary)
+        new TextDisplayBuilder().setContent("Choose which channel should receive giveaway posts and winner announcements.")
       )
   );
 
-  container.addSectionComponents(
-    new SectionBuilder()
-      .addTextDisplayComponents(
-        new TextDisplayBuilder().setContent("Clear the saved giveaway channel setting.")
-      )
-      .setButtonAccessory(
-        new ButtonBuilder()
-          .setCustomId("panel_clear_giveaway_channel")
-          .setLabel("Clear Channel")
-          .setStyle(ButtonStyle.Secondary)
-      )
+  const selectRow = new ActionRowBuilder().addComponents(
+    new ChannelSelectMenuBuilder()
+      .setCustomId("panel_select_giveaway_channel")
+      .setPlaceholder("Select giveaway channel")
+      .setChannelTypes(ChannelType.GuildText, ChannelType.GuildAnnouncement, ChannelType.PublicThread)
+      .setMinValues(1)
+      .setMaxValues(1)
   );
 
-  return [container];
+  const clearRow = new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId("panel_clear_giveaway_channel")
+      .setLabel("Clear Channel")
+      .setStyle(ButtonStyle.Secondary)
+  );
+
+  return [container, selectRow, clearRow];
 };
 
 const updatePanelMessage = async (interactionOrMessage) => {
@@ -443,6 +442,19 @@ client.on("interactionCreate", async (interaction) => {
       writeGiveaways(data);
       await syncGiveawayMessage(giveaway);
       await interaction.reply({ content: `You are entered in "${giveaway.title}".`, flags: MessageFlags.Ephemeral });
+      return;
+    }
+
+    if (interaction.isChannelSelectMenu()) {
+      if (interaction.customId !== "panel_select_giveaway_channel") {
+        return;
+      }
+
+      const selectedChannelId = interaction.values[0];
+      const settings = readSettings();
+      settings.giveawayChannelId = selectedChannelId;
+      writeSettings(settings);
+      await updatePanelMessage(interaction);
       return;
     }
 
