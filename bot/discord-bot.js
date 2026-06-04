@@ -282,7 +282,7 @@ const registerCommands = async () => {
 
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 
-client.once("ready", () => {
+client.once("clientReady", () => {
   console.log(`Logged in as ${client.user.tag}`);
   console.log(`Website giveaway file: ${config.dataFile}`);
 });
