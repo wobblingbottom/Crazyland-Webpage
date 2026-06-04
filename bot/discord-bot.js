@@ -181,7 +181,10 @@ const buildPanelComponents = (channelId) => {
 
   const container = new ContainerBuilder();
   container.addTextDisplayComponents(
-    new TextDisplayBuilder().setContent("### Doctor Panel"),
+    new TextDisplayBuilder().setContent("### Doctor Panel")
+  );
+  container.addSeparatorComponents(new SeparatorBuilder().setDivider(true));
+  container.addTextDisplayComponents(
     new TextDisplayBuilder().setContent("### Giveaway Channel"),
     new TextDisplayBuilder().setContent("Choose which channel should receive giveaway posts and winner announcements.")
   );
@@ -198,8 +201,6 @@ const buildPanelComponents = (channelId) => {
           .setStyle(ButtonStyle.Secondary)
       )
   );
-
-  container.addSeparatorComponents(new SeparatorBuilder().setDivider(true));
 
   const selectRow = new ActionRowBuilder().addComponents(
     new ChannelSelectMenuBuilder()
