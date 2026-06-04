@@ -226,8 +226,7 @@ const buildGiveawayComponents = (giveaway) => {
   if (giveaway.imageUrl) {
     container.addMediaGalleryComponents(
       new MediaGalleryBuilder().addItems({
-        media: { url: giveaway.imageUrl },
-        description: `${giveaway.title} giveaway banner`
+        media: { url: giveaway.imageUrl }
       })
     );
   }
