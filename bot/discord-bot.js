@@ -174,45 +174,29 @@ const writeSettings = (settings) => {
 
 const buildPanelComponents = (channelId) => {
   const configuredLine = channelId
-    ? `Current: <#${channelId}>`
-    : "Current: Not set";
+    ? `Current channel: <#${channelId}>`
+    : "Current channel: No channel selected.";
 
   const container = new ContainerBuilder();
   container.addTextDisplayComponents(
-    new TextDisplayBuilder().setContent("# Setup Manager"),
-    new TextDisplayBuilder().setContent("---"),
-    new TextDisplayBuilder().setContent(
-      "Use this panel to choose where giveaway messages and winner announcements should be posted."
-    ),
+    new TextDisplayBuilder().setContent("# Doctor Panel"),
     new TextDisplayBuilder().setContent("## Giveaway Channel"),
     new TextDisplayBuilder().setContent(configuredLine)
   );
   container.addSeparatorComponents(new SeparatorBuilder().setDivider(true));
-  container.addTextDisplayComponents(
-    new TextDisplayBuilder().setContent(
-      "Press the buttons below in the channel you want to use."
-    )
-  );
-
-  const refreshRow = new ActionRowBuilder().addComponents(
-    new ButtonBuilder()
-      .setCustomId("panel_refresh")
-      .setLabel("Refresh Panel")
-      .setStyle(ButtonStyle.Secondary)
-  );
 
   const channelRow = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
       .setCustomId("panel_set_giveaway_channel")
-      .setLabel("Use This Channel")
+      .setLabel("Select Channel")
       .setStyle(ButtonStyle.Primary),
     new ButtonBuilder()
       .setCustomId("panel_clear_giveaway_channel")
-      .setLabel("Clear Giveaway Channel")
+      .setLabel("Clear Channel")
       .setStyle(ButtonStyle.Secondary)
   );
 
-  return [container, refreshRow, channelRow];
+  return [container, channelRow];
 };
 
 const updatePanelMessage = async (interactionOrMessage) => {
@@ -402,11 +386,6 @@ client.on("interactionCreate", async (interaction) => {
         const settings = readSettings();
         settings.giveawayChannelId = interaction.channelId;
         writeSettings(settings);
-        await updatePanelMessage(interaction);
-        return;
-      }
-
-      if (action === "panel_refresh") {
         await updatePanelMessage(interaction);
         return;
       }
