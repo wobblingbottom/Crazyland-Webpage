@@ -288,192 +288,210 @@ client.once("ready", () => {
 });
 
 client.on("interactionCreate", async (interaction) => {
-  if (interaction.isButton()) {
-    const [action, giveawayId] = interaction.customId.split(":");
+  try {
+    if (interaction.isButton()) {
+      const [action, giveawayId] = interaction.customId.split(":");
 
-    if (action !== "giveaway_enter") {
+      if (action !== "giveaway_enter") {
+        return;
+      }
+
+      const data = readGiveaways();
+      const giveaway = data.giveaways.find((item) => item.id === giveawayId);
+
+      if (!giveaway) {
+        await interaction.reply({ content: "This giveaway no longer exists.", ephemeral: true });
+        return;
+      }
+
+      if (giveaway.status !== "Active") {
+        await interaction.reply({ content: "This giveaway is not accepting entries right now.", ephemeral: true });
+        return;
+      }
+
+      if (!Array.isArray(giveaway.entrantIds)) {
+        giveaway.entrantIds = [];
+      }
+
+      if (giveaway.entrantIds.includes(interaction.user.id)) {
+        await interaction.reply({ content: "You are already entered in this giveaway.", ephemeral: true });
+        return;
+      }
+
+      giveaway.entrantIds.push(interaction.user.id);
+      writeGiveaways(data);
+      await syncGiveawayMessage(giveaway);
+      await interaction.reply({ content: `You are entered in "${giveaway.title}".`, ephemeral: true });
+      return;
+    }
+
+    if (!interaction.isChatInputCommand()) {
       return;
     }
 
     const data = readGiveaways();
-    const giveaway = data.giveaways.find((item) => item.id === giveawayId);
 
-    if (!giveaway) {
-      await interaction.reply({ content: "This giveaway no longer exists.", ephemeral: true });
+    if (interaction.commandName === "giveaway_create") {
+      await interaction.deferReply({ ephemeral: true });
+
+      const title = interaction.options.getString("title", true);
+      const durationMinutes = interaction.options.getInteger("duration_minutes", true);
+      const prize = interaction.options.getString("prize") || "";
+      const winnerCount = interaction.options.getInteger("winner_count") || 1;
+      const imageUrl = interaction.options.getString("image_url") || "";
+      const createdAt = new Date();
+      const endsAt = new Date(createdAt.getTime() + durationMinutes * 60 * 1000);
+
+      const giveaway = {
+        id: createGiveawayId(),
+        title,
+        prize,
+        imageUrl,
+        status: "Active",
+        winner: "",
+        winnerIds: [],
+        winnerCount,
+        hostId: interaction.user.id,
+        entrantIds: [],
+        createdAt: createdAt.toISOString(),
+        endsAt: endsAt.toISOString(),
+        channelId: interaction.channelId,
+        messageId: ""
+      };
+
+      if (!interaction.channel?.isTextBased()) {
+        await interaction.editReply("This command can only be used in a text channel.");
+        return;
+      }
+
+      const message = await interaction.channel.send({
+        flags: MessageFlags.IsComponentsV2,
+        components: buildGiveawayComponents(giveaway)
+      });
+
+      giveaway.messageId = message.id;
+      data.giveaways.unshift(giveaway);
+      writeGiveaways(data);
+      await syncGiveawayMessage(giveaway);
+
+      await interaction.editReply(`Created giveaway \`${giveaway.id}\` and posted it in this channel.`);
       return;
     }
 
-    if (giveaway.status !== "Active") {
-      await interaction.reply({ content: "This giveaway is not accepting entries right now.", ephemeral: true });
+    if (interaction.commandName === "giveaway_list") {
+      if (data.giveaways.length === 0) {
+        await interaction.reply("No giveaways are currently stored.");
+        return;
+      }
+
+      const summary = data.giveaways
+        .map(
+          (item) =>
+            `${item.id} | ${item.title} | ${item.status} | Entries: ${(item.entrantIds || []).length} | Winners: ${formatWinnerLine(item)}`
+        )
+        .join("\n");
+
+      await interaction.reply(`Current giveaways:\n${summary}`);
       return;
     }
 
-    if (!Array.isArray(giveaway.entrantIds)) {
-      giveaway.entrantIds = [];
-    }
+    if (interaction.commandName === "giveaway_end") {
+      const id = interaction.options.getString("id", true);
+      const giveaway = data.giveaways.find((item) => item.id === id);
 
-    if (giveaway.entrantIds.includes(interaction.user.id)) {
-      await interaction.reply({ content: "You are already entered in this giveaway.", ephemeral: true });
+      if (!giveaway) {
+        await interaction.reply({ content: `No giveaway found for id \`${id}\`.`, ephemeral: true });
+        return;
+      }
+
+      const winners = pickWinners(giveaway.entrantIds || [], giveaway.winnerCount || 1);
+      giveaway.status = "Winner Selected";
+      giveaway.winnerIds = winners;
+      giveaway.winner = winners.length > 0 ? winners.join(", ") : "";
+      giveaway.endedAt = new Date().toISOString();
+      writeGiveaways(data);
+      await syncGiveawayMessage(giveaway);
+
+      await interaction.reply(
+        winners.length > 0
+          ? `Giveaway ended. Winner(s): ${winners.map((id) => `<@${id}>`).join(", ")}`
+          : "Giveaway ended, but there were no entrants to pick from."
+      );
       return;
     }
 
-    giveaway.entrantIds.push(interaction.user.id);
-    writeGiveaways(data);
-    await syncGiveawayMessage(giveaway);
-    await interaction.reply({ content: `You are entered in "${giveaway.title}".`, ephemeral: true });
-    return;
-  }
+    if (interaction.commandName === "giveaway_status") {
+      const id = interaction.options.getString("id", true);
+      const status = interaction.options.getString("status", true);
+      const giveaway = data.giveaways.find((item) => item.id === id);
 
-  if (!interaction.isChatInputCommand()) {
-    return;
-  }
+      if (!giveaway) {
+        await interaction.reply({ content: `No giveaway found for id \`${id}\`.`, ephemeral: true });
+        return;
+      }
 
-  const data = readGiveaways();
+      giveaway.status = status;
+      writeGiveaways(data);
+      await syncGiveawayMessage(giveaway);
 
-  if (interaction.commandName === "giveaway_create") {
-    const title = interaction.options.getString("title", true);
-    const durationMinutes = interaction.options.getInteger("duration_minutes", true);
-    const prize = interaction.options.getString("prize") || "";
-    const winnerCount = interaction.options.getInteger("winner_count") || 1;
-    const imageUrl = interaction.options.getString("image_url") || "";
-    const createdAt = new Date();
-    const endsAt = new Date(createdAt.getTime() + durationMinutes * 60 * 1000);
-
-    const giveaway = {
-      id: createGiveawayId(),
-      title,
-      prize,
-      imageUrl,
-      status: "Active",
-      winner: "",
-      winnerIds: [],
-      winnerCount,
-      hostId: interaction.user.id,
-      entrantIds: [],
-      createdAt: createdAt.toISOString(),
-      endsAt: endsAt.toISOString(),
-      channelId: interaction.channelId,
-      messageId: ""
-    };
-
-    const message = await interaction.channel.send({
-      flags: MessageFlags.IsComponentsV2,
-      components: buildGiveawayComponents(giveaway)
-    });
-
-    giveaway.messageId = message.id;
-    data.giveaways.unshift(giveaway);
-    writeGiveaways(data);
-    await syncGiveawayMessage(giveaway);
-
-    await interaction.reply({
-      content: `Created giveaway \`${giveaway.id}\` and posted it in this channel.`,
-      ephemeral: true
-    });
-    return;
-  }
-
-  if (interaction.commandName === "giveaway_list") {
-    if (data.giveaways.length === 0) {
-      await interaction.reply("No giveaways are currently stored.");
+      await interaction.reply(`Updated \`${id}\` to status: ${status}.`);
       return;
     }
 
-    const summary = data.giveaways
-      .map(
-        (item) =>
-          `${item.id} | ${item.title} | ${item.status} | Entries: ${(item.entrantIds || []).length} | Winners: ${formatWinnerLine(item)}`
-      )
-      .join("\n");
+    if (interaction.commandName === "giveaway_remove") {
+      const id = interaction.options.getString("id", true);
+      const giveaway = data.giveaways.find((item) => item.id === id);
+      const nextGiveaways = data.giveaways.filter((item) => item.id !== id);
 
-    await interaction.reply(`Current giveaways:\n${summary}`);
-    return;
-  }
+      if (!giveaway || nextGiveaways.length === data.giveaways.length) {
+        await interaction.reply({ content: `No giveaway found for id \`${id}\`.`, ephemeral: true });
+        return;
+      }
 
-  if (interaction.commandName === "giveaway_end") {
-    const id = interaction.options.getString("id", true);
-    const giveaway = data.giveaways.find((item) => item.id === id);
-
-    if (!giveaway) {
-      await interaction.reply({ content: `No giveaway found for id \`${id}\`.`, ephemeral: true });
+      writeGiveaways({ giveaways: nextGiveaways });
+      await interaction.reply(`Removed giveaway \`${id}\` from the website feed.`);
       return;
     }
 
-    const winners = pickWinners(giveaway.entrantIds || [], giveaway.winnerCount || 1);
-    giveaway.status = "Winner Selected";
-    giveaway.winnerIds = winners;
-    giveaway.winner = winners.length > 0 ? winners.join(", ") : "";
-    giveaway.endedAt = new Date().toISOString();
-    writeGiveaways(data);
-    await syncGiveawayMessage(giveaway);
+    if (interaction.commandName === "giveaway_reroll") {
+      const id = interaction.options.getString("id", true);
+      const giveaway = data.giveaways.find((item) => item.id === id);
 
-    await interaction.reply(
-      winners.length > 0
-        ? `Giveaway ended. Winner(s): ${winners.map((id) => `<@${id}>`).join(", ")}`
-        : "Giveaway ended, but there were no entrants to pick from."
-    );
-    return;
-  }
+      if (!giveaway) {
+        await interaction.reply({ content: `No giveaway found for id \`${id}\`.`, ephemeral: true });
+        return;
+      }
 
-  if (interaction.commandName === "giveaway_status") {
-    const id = interaction.options.getString("id", true);
-    const status = interaction.options.getString("status", true);
-    const giveaway = data.giveaways.find((item) => item.id === id);
+      const remainingEntrants = (giveaway.entrantIds || []).filter(
+        (entrantId) => !(giveaway.winnerIds || []).includes(entrantId)
+      );
+      const winners = pickWinners(remainingEntrants, giveaway.winnerCount || 1);
 
-    if (!giveaway) {
-      await interaction.reply({ content: `No giveaway found for id \`${id}\`.`, ephemeral: true });
-      return;
+      if (winners.length === 0) {
+        await interaction.reply({ content: "No remaining entrants available for reroll.", ephemeral: true });
+        return;
+      }
+
+      giveaway.winnerIds = winners;
+      giveaway.winner = winners.join(", ");
+      giveaway.status = "Winner Selected";
+      writeGiveaways(data);
+      await syncGiveawayMessage(giveaway);
+
+      await interaction.reply(`Rerolled winner(s): ${winners.map((id) => `<@${id}>`).join(", ")}`);
     }
+  } catch (error) {
+    console.error("Interaction handling failed:", error);
 
-    giveaway.status = status;
-    writeGiveaways(data);
-    await syncGiveawayMessage(giveaway);
+    if (interaction.isRepliable()) {
+      const message = "The giveaway command failed. Check Railway logs for the detailed error.";
 
-    await interaction.reply(`Updated \`${id}\` to status: ${status}.`);
-    return;
-  }
-
-  if (interaction.commandName === "giveaway_remove") {
-    const id = interaction.options.getString("id", true);
-    const giveaway = data.giveaways.find((item) => item.id === id);
-    const nextGiveaways = data.giveaways.filter((item) => item.id !== id);
-
-    if (!giveaway || nextGiveaways.length === data.giveaways.length) {
-      await interaction.reply({ content: `No giveaway found for id \`${id}\`.`, ephemeral: true });
-      return;
+      if (interaction.deferred || interaction.replied) {
+        await interaction.editReply(message).catch(() => {});
+      } else {
+        await interaction.reply({ content: message, ephemeral: true }).catch(() => {});
+      }
     }
-
-    writeGiveaways({ giveaways: nextGiveaways });
-    await interaction.reply(`Removed giveaway \`${id}\` from the website feed.`);
-    return;
-  }
-
-  if (interaction.commandName === "giveaway_reroll") {
-    const id = interaction.options.getString("id", true);
-    const giveaway = data.giveaways.find((item) => item.id === id);
-
-    if (!giveaway) {
-      await interaction.reply({ content: `No giveaway found for id \`${id}\`.`, ephemeral: true });
-      return;
-    }
-
-    const remainingEntrants = (giveaway.entrantIds || []).filter(
-      (entrantId) => !(giveaway.winnerIds || []).includes(entrantId)
-    );
-    const winners = pickWinners(remainingEntrants, giveaway.winnerCount || 1);
-
-    if (winners.length === 0) {
-      await interaction.reply({ content: "No remaining entrants available for reroll.", ephemeral: true });
-      return;
-    }
-
-    giveaway.winnerIds = winners;
-    giveaway.winner = winners.join(", ");
-    giveaway.status = "Winner Selected";
-    writeGiveaways(data);
-    await syncGiveawayMessage(giveaway);
-
-    await interaction.reply(`Rerolled winner(s): ${winners.map((id) => `<@${id}>`).join(", ")}`);
   }
 });
 
