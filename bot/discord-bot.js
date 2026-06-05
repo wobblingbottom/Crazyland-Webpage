@@ -418,18 +418,19 @@ const buildGiveawayComponents = (giveaway) => {
   const statusValue = hasWinners
     ? giveaway.winnerIds.map((id) => `<@${id}>`).join(", ")
     : `<t:${toUnix(giveaway.endsAt)}:R>`;
+  const participantCount = emojifyDigits(giveaway.entrantIds.length);
 
   container.addSectionComponents(
     new SectionBuilder()
       .addTextDisplayComponents(
         new TextDisplayBuilder().setContent(
-          `**${statusLabel}:**\n${statusValue}`
+          `**${statusLabel}:**\n${statusValue}\n**Participants:** ${participantCount}`
         )
       )
       .setButtonAccessory(
         new ButtonBuilder()
           .setCustomId(`giveaway_enter:${giveaway.id}`)
-          .setLabel(`Enter (${giveaway.entrantIds.length})`)
+          .setLabel("Enter")
           .setStyle(ButtonStyle.Success)
           .setDisabled(giveaway.status !== "Active")
       )
