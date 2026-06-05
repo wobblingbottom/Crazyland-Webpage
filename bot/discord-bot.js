@@ -273,14 +273,19 @@ const buildWinnerAnnouncementBox = (giveaway) => {
   const winnerLine = hasWinners
     ? giveaway.winnerIds.map((id) => `<@${id}>`).join(", ")
     : "No entrants joined this giveaway.";
+  const celebrationLine = hasWinners
+    ? giveaway.winnerIds.length === 1
+      ? `Congratulations ${winnerLine}! You won **${giveaway.title}**.`
+      : `Congratulations ${winnerLine}! You won **${giveaway.title}**.`
+    : `**${giveaway.title}** has ended.`;
 
   const container = new ContainerBuilder();
   container.addTextDisplayComponents(
-    new TextDisplayBuilder().setContent("### Giveaway Ended")
+    new TextDisplayBuilder().setContent("### Giveaway Complete")
   );
   container.addSeparatorComponents(new SeparatorBuilder().setDivider(true));
   container.addTextDisplayComponents(
-    new TextDisplayBuilder().setContent(`**${giveaway.title}**`),
+    new TextDisplayBuilder().setContent(celebrationLine),
     new TextDisplayBuilder().setContent(
       hasWinners ? `${winnerLabel}: ${winnerLine}` : winnerLine
     )
