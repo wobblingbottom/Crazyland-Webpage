@@ -267,6 +267,28 @@ const buildDecisionBox = (title, lines = [], buttons = []) => {
   return [container];
 };
 
+const buildWinnerAnnouncementBox = (giveaway) => {
+  const hasWinners = Array.isArray(giveaway.winnerIds) && giveaway.winnerIds.length > 0;
+  const winnerLabel = giveaway.winnerIds?.length === 1 ? "Winner" : "Winners";
+  const winnerLine = hasWinners
+    ? giveaway.winnerIds.map((id) => `<@${id}>`).join(", ")
+    : "No entrants joined this giveaway.";
+
+  const container = new ContainerBuilder();
+  container.addTextDisplayComponents(
+    new TextDisplayBuilder().setContent("### Giveaway Ended")
+  );
+  container.addSeparatorComponents(new SeparatorBuilder().setDivider(true));
+  container.addTextDisplayComponents(
+    new TextDisplayBuilder().setContent(`**${giveaway.title}**`),
+    new TextDisplayBuilder().setContent(
+      hasWinners ? `${winnerLabel}: ${winnerLine}` : winnerLine
+    )
+  );
+
+  return [container];
+};
+
 const replyWithCommandBox = async (interaction, title, lines, options = {}) => {
   const payload = {
     flags: MessageFlags.IsComponentsV2 | (options.ephemeral ? MessageFlags.Ephemeral : 0),
@@ -321,16 +343,10 @@ const announceWinners = async (giveaway) => {
     return;
   }
 
-  const winnerLine =
-    giveaway.winnerIds.length > 0
-      ? giveaway.winnerIds.map((id) => `<@${id}>`).join(", ")
-      : "No entrants";
-
-  await channel.send(
-    giveaway.winnerIds.length > 0
-      ? `Giveaway ended: **${giveaway.title}**\nCongratulations ${winnerLine}!`
-      : `Giveaway ended: **${giveaway.title}**\nNo entrants joined this giveaway.`
-  );
+  await channel.send({
+    flags: MessageFlags.IsComponentsV2,
+    components: buildWinnerAnnouncementBox(giveaway)
+  });
 };
 
 const createGiveawayId = () => `gw-${Date.now().toString(36)}`;
