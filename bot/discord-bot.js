@@ -429,7 +429,7 @@ const buildGiveawayComponents = (giveaway) => {
       .setButtonAccessory(
         new ButtonBuilder()
           .setCustomId(`giveaway_enter:${giveaway.id}`)
-          .setLabel(`Enter (${emojifyDigits(giveaway.entrantIds.length)})`)
+          .setLabel(`Enter (${giveaway.entrantIds.length})`)
           .setStyle(ButtonStyle.Success)
           .setDisabled(giveaway.status !== "Active")
       )
