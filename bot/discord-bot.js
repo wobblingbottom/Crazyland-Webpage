@@ -229,6 +229,40 @@ const updatePanelMessage = async (interactionOrMessage) => {
   await interactionOrMessage.edit(payload);
 };
 
+const buildCommandBox = (title, lines = []) => {
+  const container = new ContainerBuilder();
+  container.addTextDisplayComponents(
+    new TextDisplayBuilder().setContent(`### ${title}`)
+  );
+
+  if (lines.length > 0) {
+    container.addSeparatorComponents(new SeparatorBuilder().setDivider(true));
+    container.addTextDisplayComponents(
+      ...lines.map((line) => new TextDisplayBuilder().setContent(line))
+    );
+  }
+
+  return [container];
+};
+
+const replyWithCommandBox = async (interaction, title, lines, options = {}) => {
+  const payload = {
+    flags: MessageFlags.IsComponentsV2 | (options.ephemeral ? MessageFlags.Ephemeral : 0),
+    components: buildCommandBox(title, lines)
+  };
+
+  await interaction.reply(payload);
+};
+
+const editReplyWithCommandBox = async (interaction, title, lines, options = {}) => {
+  const payload = {
+    flags: MessageFlags.IsComponentsV2 | (options.ephemeral ? MessageFlags.Ephemeral : 0),
+    components: buildCommandBox(title, lines)
+  };
+
+  await interaction.editReply(payload);
+};
+
 const ensureDataFile = () => {
   ensureJsonFile(config.dataFile, { giveaways: [] });
 };
@@ -310,11 +344,18 @@ const buildGiveawayComponents = (giveaway) => {
     )
   );
 
+  const hasWinners = Array.isArray(giveaway.winnerIds) && giveaway.winnerIds.length > 0;
+  const winnerLabel = giveaway.winnerIds?.length === 1 ? "Winner" : "Winners";
+  const statusLabel = hasWinners ? winnerLabel : "Time remaining";
+  const statusValue = hasWinners
+    ? giveaway.winnerIds.map((id) => `<@${id}>`).join(", ")
+    : `<t:${toUnix(giveaway.endsAt)}:R>`;
+
   container.addSectionComponents(
     new SectionBuilder()
       .addTextDisplayComponents(
         new TextDisplayBuilder().setContent(
-          `**Time remaining:**\n<t:${toUnix(giveaway.endsAt)}:R>`
+          `**${statusLabel}:**\n${statusValue}`
         )
       )
       .setButtonAccessory(
@@ -552,7 +593,12 @@ client.on("interactionCreate", async (interaction) => {
       const giveawayChannel = await getGiveawayChannel(interaction.channelId);
 
       if (!giveawayChannel) {
-        await interaction.editReply("No valid giveaway channel is configured. Use /panel first.");
+        await editReplyWithCommandBox(
+          interaction,
+          "Giveaway Create",
+          ["No valid giveaway channel is configured.", "Use `/panel` first."],
+          { ephemeral: true }
+        );
         return;
       }
 
@@ -568,13 +614,28 @@ client.on("interactionCreate", async (interaction) => {
       writeGiveaways(data);
       await syncGiveawayMessage(giveaway);
 
-      await interaction.editReply(`Created giveaway \`${giveaway.id}\` and posted it in this channel.`);
+      await editReplyWithCommandBox(
+        interaction,
+        "Giveaway Created",
+        [
+          `ID: \`${giveaway.id}\``,
+          `Channel: <#${giveaway.channelId}>`,
+          `Winners: ${giveaway.winnerCount}`,
+          `Ends: <t:${toUnix(giveaway.endsAt)}:f>`
+        ],
+        { ephemeral: true }
+      );
       return;
     }
 
     if (interaction.commandName === "giveaway_list") {
       if (data.giveaways.length === 0) {
-        await interaction.reply("No giveaways are currently stored.");
+        await replyWithCommandBox(
+          interaction,
+          "Giveaway List",
+          ["No giveaways are currently stored."],
+          { ephemeral: true }
+        );
         return;
       }
 
@@ -582,10 +643,9 @@ client.on("interactionCreate", async (interaction) => {
         .map(
           (item) =>
             `${item.id} | ${item.title} | ${item.status} | Entries: ${(item.entrantIds || []).length} | Winners: ${formatWinnerLine(item)}`
-        )
-        .join("\n");
+        );
 
-      await interaction.reply(`Current giveaways:\n${summary}`);
+      await replyWithCommandBox(interaction, "Giveaway List", summary, { ephemeral: true });
       return;
     }
 
@@ -594,16 +654,31 @@ client.on("interactionCreate", async (interaction) => {
       const giveaway = data.giveaways.find((item) => item.id === id);
 
       if (!giveaway) {
-        await interaction.reply({ content: `No giveaway found for id \`${id}\`.`, flags: MessageFlags.Ephemeral });
+        await replyWithCommandBox(
+          interaction,
+          "Giveaway End",
+          [`No giveaway found for id \`${id}\`.`],
+          { ephemeral: true }
+        );
         return;
       }
 
       const winners = await finishGiveaway(giveaway, data, { announce: true });
 
-      await interaction.reply(
+      await replyWithCommandBox(
+        interaction,
+        "Giveaway Ended",
         winners.length > 0
-          ? `Giveaway ended. Winner(s): ${winners.map((id) => `<@${id}>`).join(", ")}`
-          : "Giveaway ended, but there were no entrants to pick from."
+          ? [
+              `ID: \`${giveaway.id}\``,
+              `Winner(s): ${winners.map((winnerId) => `<@${winnerId}>`).join(", ")}`,
+              `Announced in: <#${giveaway.channelId}>`
+            ]
+          : [
+              `ID: \`${giveaway.id}\``,
+              "Giveaway ended, but there were no entrants to pick from."
+            ],
+        { ephemeral: true }
       );
       return;
     }
@@ -614,7 +689,12 @@ client.on("interactionCreate", async (interaction) => {
       const giveaway = data.giveaways.find((item) => item.id === id);
 
       if (!giveaway) {
-        await interaction.reply({ content: `No giveaway found for id \`${id}\`.`, flags: MessageFlags.Ephemeral });
+        await replyWithCommandBox(
+          interaction,
+          "Giveaway Status",
+          [`No giveaway found for id \`${id}\`.`],
+          { ephemeral: true }
+        );
         return;
       }
 
@@ -622,7 +702,12 @@ client.on("interactionCreate", async (interaction) => {
       writeGiveaways(data);
       await syncGiveawayMessage(giveaway);
 
-      await interaction.reply(`Updated \`${id}\` to status: ${status}.`);
+      await replyWithCommandBox(
+        interaction,
+        "Giveaway Status",
+        [`Updated \`${id}\` to status: ${status}.`],
+        { ephemeral: true }
+      );
       return;
     }
 
@@ -632,12 +717,22 @@ client.on("interactionCreate", async (interaction) => {
       const nextGiveaways = data.giveaways.filter((item) => item.id !== id);
 
       if (!giveaway || nextGiveaways.length === data.giveaways.length) {
-        await interaction.reply({ content: `No giveaway found for id \`${id}\`.`, flags: MessageFlags.Ephemeral });
+        await replyWithCommandBox(
+          interaction,
+          "Giveaway Remove",
+          [`No giveaway found for id \`${id}\`.`],
+          { ephemeral: true }
+        );
         return;
       }
 
       writeGiveaways({ giveaways: nextGiveaways });
-      await interaction.reply(`Removed giveaway \`${id}\` from the website feed.`);
+      await replyWithCommandBox(
+        interaction,
+        "Giveaway Removed",
+        [`Removed giveaway \`${id}\` from the website feed.`],
+        { ephemeral: true }
+      );
       return;
     }
 
@@ -646,7 +741,12 @@ client.on("interactionCreate", async (interaction) => {
       const giveaway = data.giveaways.find((item) => item.id === id);
 
       if (!giveaway) {
-        await interaction.reply({ content: `No giveaway found for id \`${id}\`.`, flags: MessageFlags.Ephemeral });
+        await replyWithCommandBox(
+          interaction,
+          "Giveaway Reroll",
+          [`No giveaway found for id \`${id}\`.`],
+          { ephemeral: true }
+        );
         return;
       }
 
@@ -656,7 +756,12 @@ client.on("interactionCreate", async (interaction) => {
       const winners = pickWinners(remainingEntrants, giveaway.winnerCount || 1);
 
       if (winners.length === 0) {
-        await interaction.reply({ content: "No remaining entrants available for reroll.", flags: MessageFlags.Ephemeral });
+        await replyWithCommandBox(
+          interaction,
+          "Giveaway Reroll",
+          ["No remaining entrants available for reroll."],
+          { ephemeral: true }
+        );
         return;
       }
 
@@ -666,7 +771,12 @@ client.on("interactionCreate", async (interaction) => {
       writeGiveaways(data);
       await syncGiveawayMessage(giveaway);
 
-      await interaction.reply(`Rerolled winner(s): ${winners.map((id) => `<@${id}>`).join(", ")}`);
+      await replyWithCommandBox(
+        interaction,
+        "Giveaway Reroll",
+        [`Rerolled winner(s): ${winners.map((winnerId) => `<@${winnerId}>`).join(", ")}`],
+        { ephemeral: true }
+      );
       return;
     }
 
@@ -674,7 +784,12 @@ client.on("interactionCreate", async (interaction) => {
       await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
       if (!interaction.channel?.isTextBased()) {
-        await interaction.editReply("This command can only be used in a text channel.");
+        await editReplyWithCommandBox(
+          interaction,
+          "Doctor Panel",
+          ["This command can only be used in a text channel."],
+          { ephemeral: true }
+        );
         return;
       }
 
@@ -684,18 +799,31 @@ client.on("interactionCreate", async (interaction) => {
         components: buildPanelComponents(settings.giveawayChannelId)
       });
 
-      await interaction.editReply("Setup panel posted in this channel.");
+      await editReplyWithCommandBox(
+        interaction,
+        "Doctor Panel",
+        ["Setup panel posted in this channel."],
+        { ephemeral: true }
+      );
     }
   } catch (error) {
     console.error("Interaction handling failed:", error);
 
     if (interaction.isRepliable()) {
-      const message = "The giveaway command failed. Check Railway logs for the detailed error.";
-
       if (interaction.deferred || interaction.replied) {
-        await interaction.editReply(message).catch(() => {});
+        await editReplyWithCommandBox(
+          interaction,
+          "Command Failed",
+          ["The giveaway command failed.", "Check Railway logs for the detailed error."],
+          { ephemeral: true }
+        ).catch(() => {});
       } else {
-        await interaction.reply({ content: message, flags: MessageFlags.Ephemeral }).catch(() => {});
+        await replyWithCommandBox(
+          interaction,
+          "Command Failed",
+          ["The giveaway command failed.", "Check Railway logs for the detailed error."],
+          { ephemeral: true }
+        ).catch(() => {});
       }
     }
   }
