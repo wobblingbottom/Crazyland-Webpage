@@ -70,6 +70,22 @@ const config = {
     "https://raw.githubusercontent.com/wobblingbottom/Crazyland-Webpage/main/banner.png"
 };
 
+const NUMBER_EMOJIS = {
+  "0": "<:Zero:1512353896318894110>",
+  "1": "<:One:1512353884327383140>",
+  "2": "<:Two:1512353894460821504>",
+  "3": "<:Three:1512353892766060665>",
+  "4": "<:Four:1512353877725548586>",
+  "5": "<:Five:1512353876274315364>",
+  "6": "<:Six:1512353887716380762>",
+  "7": "<:Seven:1512353885946249327>",
+  "8": "<:Eight:1512353874910908528>",
+  "9": "<:Nine:1512353879931621386>"
+};
+
+const emojifyDigits = (value) =>
+  String(value).replace(/\d/g, (digit) => NUMBER_EMOJIS[digit] || digit);
+
 const commands = [
   new SlashCommandBuilder()
     .setName("giveaway_create")
@@ -413,7 +429,7 @@ const buildGiveawayComponents = (giveaway) => {
       .setButtonAccessory(
         new ButtonBuilder()
           .setCustomId(`giveaway_enter:${giveaway.id}`)
-          .setLabel(`Enter (${giveaway.entrantIds.length})`)
+          .setLabel(`Enter (${emojifyDigits(giveaway.entrantIds.length)})`)
           .setStyle(ButtonStyle.Success)
           .setDisabled(giveaway.status !== "Active")
       )
@@ -431,7 +447,7 @@ const buildGiveawayComponents = (giveaway) => {
 
   container.addTextDisplayComponents(
     new TextDisplayBuilder().setContent(
-      `Winners: ${giveaway.winnerCount} | Ends: <t:${toUnix(giveaway.endsAt)}:f>`
+      `Winners: ${emojifyDigits(giveaway.winnerCount)} | Ends: <t:${toUnix(giveaway.endsAt)}:f>`
     )
   );
 
@@ -740,7 +756,7 @@ client.on("interactionCreate", async (interaction) => {
         [
           `ID: \`${giveaway.id}\``,
           `Channel: <#${giveaway.channelId}>`,
-          `Winners: ${giveaway.winnerCount}`,
+          `Winners: ${emojifyDigits(giveaway.winnerCount)}`,
           `Ends: <t:${toUnix(giveaway.endsAt)}:f>`
         ],
         { ephemeral: true }
@@ -762,7 +778,7 @@ client.on("interactionCreate", async (interaction) => {
       const summary = data.giveaways
         .map(
           (item) =>
-            `${item.id} | ${item.title} | ${item.status} | Entries: ${(item.entrantIds || []).length} | Winners: ${formatWinnerLine(item)}`
+            `${item.id} | ${item.title} | ${item.status} | Entries: ${emojifyDigits((item.entrantIds || []).length)} | Winners: ${formatWinnerLine(item)}`
         );
 
       await replyWithCommandBox(interaction, "Giveaway List", summary, { ephemeral: true });
