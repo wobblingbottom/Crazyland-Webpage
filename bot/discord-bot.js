@@ -261,7 +261,11 @@ const announceWinners = async (giveaway) => {
       ? giveaway.winnerIds.map((id) => `<@${id}>`).join(", ")
       : "No entrants";
 
-  await channel.send(`Giveaway ended: **${giveaway.title}**\nWinner(s): ${winnerLine}`);
+  await channel.send(
+    giveaway.winnerIds.length > 0
+      ? `Giveaway ended: **${giveaway.title}**\nCongratulations ${winnerLine}!`
+      : `Giveaway ended: **${giveaway.title}**\nNo entrants joined this giveaway.`
+  );
 };
 
 const createGiveawayId = () => `gw-${Date.now().toString(36)}`;
@@ -359,6 +363,51 @@ const writeGiveaways = (data) => {
   writeFileSync(config.dataFile, `${JSON.stringify(data, null, 2)}\n`, "utf8");
 };
 
+const finishGiveaway = async (giveaway, data, options = {}) => {
+  const { announce = true } = options;
+
+  if (!giveaway || giveaway.status === "Winner Selected" || giveaway.status === "Closed") {
+    return [];
+  }
+
+  const winners = pickWinners(giveaway.entrantIds || [], giveaway.winnerCount || 1);
+  giveaway.status = "Winner Selected";
+  giveaway.winnerIds = winners;
+  giveaway.winner = winners.length > 0 ? winners.join(", ") : "";
+  giveaway.endedAt = new Date().toISOString();
+  writeGiveaways(data);
+  await syncGiveawayMessage(giveaway);
+
+  if (announce) {
+    await announceWinners(giveaway);
+  }
+
+  return winners;
+};
+
+const closeExpiredGiveaways = async () => {
+  const data = readGiveaways();
+  const now = Date.now();
+  let changed = false;
+
+  for (const giveaway of data.giveaways) {
+    if (giveaway.status !== "Active") {
+      continue;
+    }
+
+    if (new Date(giveaway.endsAt).getTime() > now) {
+      continue;
+    }
+
+    await finishGiveaway(giveaway, data, { announce: true });
+    changed = true;
+  }
+
+  if (changed) {
+    writeGiveaways(data);
+  }
+};
+
 const syncGiveawayMessage = async (giveaway) => {
   if (!giveaway.channelId || !giveaway.messageId) {
     return;
@@ -390,6 +439,11 @@ const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 client.once("clientReady", () => {
   console.log(`Logged in as ${client.user.tag}`);
   console.log(`Website giveaway file: ${config.dataFile}`);
+  setInterval(() => {
+    closeExpiredGiveaways().catch((error) => {
+      console.error("Automatic giveaway close failed:", error);
+    });
+  }, 15_000);
 });
 
 client.on("interactionCreate", async (interaction) => {
@@ -544,14 +598,7 @@ client.on("interactionCreate", async (interaction) => {
         return;
       }
 
-      const winners = pickWinners(giveaway.entrantIds || [], giveaway.winnerCount || 1);
-      giveaway.status = "Winner Selected";
-      giveaway.winnerIds = winners;
-      giveaway.winner = winners.length > 0 ? winners.join(", ") : "";
-      giveaway.endedAt = new Date().toISOString();
-      writeGiveaways(data);
-      await syncGiveawayMessage(giveaway);
-      await announceWinners(giveaway);
+      const winners = await finishGiveaway(giveaway, data, { announce: true });
 
       await interaction.reply(
         winners.length > 0
