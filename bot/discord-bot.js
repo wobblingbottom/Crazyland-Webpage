@@ -245,6 +245,28 @@ const buildCommandBox = (title, lines = []) => {
   return [container];
 };
 
+const buildDecisionBox = (title, lines = [], buttons = []) => {
+  const container = new ContainerBuilder();
+  container.addTextDisplayComponents(
+    new TextDisplayBuilder().setContent(`### ${title}`)
+  );
+
+  if (lines.length > 0) {
+    container.addSeparatorComponents(new SeparatorBuilder().setDivider(true));
+    container.addTextDisplayComponents(
+      ...lines.map((line) => new TextDisplayBuilder().setContent(line))
+    );
+  }
+
+  if (buttons.length > 0) {
+    container.addActionRowComponents(
+      new ActionRowBuilder().addComponents(...buttons)
+    );
+  }
+
+  return [container];
+};
+
 const replyWithCommandBox = async (interaction, title, lines, options = {}) => {
   const payload = {
     flags: MessageFlags.IsComponentsV2 | (options.ephemeral ? MessageFlags.Ephemeral : 0),
@@ -261,6 +283,15 @@ const editReplyWithCommandBox = async (interaction, title, lines, options = {}) 
   };
 
   await interaction.editReply(payload);
+};
+
+const replyWithDecisionBox = async (interaction, title, lines, buttons, options = {}) => {
+  const payload = {
+    flags: MessageFlags.IsComponentsV2 | (options.ephemeral ? MessageFlags.Ephemeral : 0),
+    components: buildDecisionBox(title, lines, buttons)
+  };
+
+  await interaction.reply(payload);
 };
 
 const ensureDataFile = () => {
@@ -508,6 +539,44 @@ client.on("interactionCreate", async (interaction) => {
         return;
       }
 
+      if (action === "giveaway_leave_confirm") {
+        const data = readGiveaways();
+        const giveaway = data.giveaways.find((item) => item.id === giveawayId);
+
+        if (!giveaway) {
+          await replyWithCommandBox(
+            interaction,
+            "Giveaway Entry",
+            ["This giveaway no longer exists."],
+            { ephemeral: true }
+          );
+          return;
+        }
+
+        giveaway.entrantIds = (giveaway.entrantIds || []).filter(
+          (entrantId) => entrantId !== interaction.user.id
+        );
+        writeGiveaways(data);
+        await syncGiveawayMessage(giveaway);
+        await replyWithCommandBox(
+          interaction,
+          "Giveaway Entry",
+          [`You left "${giveaway.title}".`],
+          { ephemeral: true }
+        );
+        return;
+      }
+
+      if (action === "giveaway_leave_cancel") {
+        await replyWithCommandBox(
+          interaction,
+          "Giveaway Entry",
+          ["You stayed in the giveaway."],
+          { ephemeral: true }
+        );
+        return;
+      }
+
       if (action !== "giveaway_enter") {
         return;
       }
@@ -516,12 +585,22 @@ client.on("interactionCreate", async (interaction) => {
       const giveaway = data.giveaways.find((item) => item.id === giveawayId);
 
       if (!giveaway) {
-        await interaction.reply({ content: "This giveaway no longer exists.", flags: MessageFlags.Ephemeral });
+        await replyWithCommandBox(
+          interaction,
+          "Giveaway Entry",
+          ["This giveaway no longer exists."],
+          { ephemeral: true }
+        );
         return;
       }
 
       if (giveaway.status !== "Active") {
-        await interaction.reply({ content: "This giveaway is not accepting entries right now.", flags: MessageFlags.Ephemeral });
+        await replyWithCommandBox(
+          interaction,
+          "Giveaway Entry",
+          ["This giveaway is not accepting entries right now."],
+          { ephemeral: true }
+        );
         return;
       }
 
@@ -530,14 +609,34 @@ client.on("interactionCreate", async (interaction) => {
       }
 
       if (giveaway.entrantIds.includes(interaction.user.id)) {
-        await interaction.reply({ content: "You are already entered in this giveaway.", flags: MessageFlags.Ephemeral });
+        await replyWithDecisionBox(
+          interaction,
+          "Giveaway Entry",
+          ["You have already entered the giveaway.", "Do you want to leave?"],
+          [
+            new ButtonBuilder()
+              .setCustomId(`giveaway_leave_confirm:${giveaway.id}`)
+              .setLabel("Leave Giveaway")
+              .setStyle(ButtonStyle.Danger),
+            new ButtonBuilder()
+              .setCustomId(`giveaway_leave_cancel:${giveaway.id}`)
+              .setLabel("Stay Entered")
+              .setStyle(ButtonStyle.Secondary)
+          ],
+          { ephemeral: true }
+        );
         return;
       }
 
       giveaway.entrantIds.push(interaction.user.id);
       writeGiveaways(data);
       await syncGiveawayMessage(giveaway);
-      await interaction.reply({ content: `You are entered in "${giveaway.title}".`, flags: MessageFlags.Ephemeral });
+      await replyWithCommandBox(
+        interaction,
+        "Giveaway Entry",
+        [`You are entered in "${giveaway.title}".`],
+        { ephemeral: true }
+      );
       return;
     }
 
