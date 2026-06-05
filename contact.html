@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Contact | Crazyland</title>
+  <meta name="description" content="Crazyland contact page.">
+  <meta name="contact-api-url" content="https://your-bot-service.up.railway.app/api/contact">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="page-shell">
+    <header class="site-header">
+      <a class="brand" href="index.html">
+        <span class="brand-mark">C</span>
+        <span class="brand-copy">
+          <strong>Crazyland</strong>
+          <small>Portfolio</small>
+        </span>
+      </a>
+
+      <nav class="site-nav" aria-label="Primary">
+        <a href="index.html">Home</a>
+        <a href="gallery.html">Gallery</a>
+        <a href="commissions.html">Commissions</a>
+        <a href="community.html">Community</a>
+        <a class="current" href="contact.html">Contact</a>
+      </nav>
+
+      <div class="header-actions">
+        <button class="audio-toggle" type="button" aria-pressed="false">Sound On</button>
+        <button class="theme-toggle" type="button" aria-pressed="false">Dark Mode</button>
+      </div>
+    </header>
+
+    <main>
+      <section class="page-intro page-transition-target">
+        <h1>Contact and about</h1>
+        <p>Reach out and add your studio details here.</p>
+      </section>
+
+      <section class="content-section page-transition-target">
+        <div class="section-heading">
+          <h2>About</h2>
+        </div>
+        <div class="two-column">
+          <article class="content-card"><p>Editable text.</p></article>
+          <article class="content-card"><p>Editable text.</p></article>
+        </div>
+      </section>
+
+      <section class="content-section page-transition-target">
+        <div class="section-heading">
+          <h2>Get in touch</h2>
+        </div>
+
+        <div class="contact-layout">
+          <article class="content-card">
+            <p><strong>Choose contact method</strong></p>
+            <div class="contact-methods" role="radiogroup" aria-label="Contact method">
+              <label class="contact-method">
+                <input type="radio" name="contact_method" value="website" checked>
+                <span>Website Message</span>
+              </label>
+              <label class="contact-method">
+                <input type="radio" name="contact_method" value="discord">
+                <span>Discord DM</span>
+              </label>
+            </div>
+            <div class="contact-option is-active" data-contact-option="website">
+              <p><strong>Website Message</strong></p>
+              <p>Send a message here and the bot will forward it to Discord.</p>
+            </div>
+            <div class="contact-option" data-contact-option="discord">
+              <p><strong>Discord DM</strong></p>
+              <p>Add or message me on Discord directly: <strong>@Duke Wobblebottom</strong></p>
+              <a class="button" href="https://discord.com/channels/@me" target="_blank" rel="noreferrer">Open Discord</a>
+            </div>
+          </article>
+
+          <form class="contact-form" data-contact-endpoint>
+            <label>
+              Name
+              <input type="text" name="name" placeholder="Your name">
+            </label>
+            <label class="full-width">
+              Discord Username
+              <input type="text" name="discord_username" placeholder="yourusername">
+            </label>
+            <label class="full-width">
+              Message
+              <textarea name="message" rows="6" placeholder="Write your message here."></textarea>
+            </label>
+            <button class="button" type="submit">Send Message</button>
+            <p class="form-note" aria-live="polite"></p>
+          </form>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <audio class="background-audio" loop preload="auto">
+    <source src="ambient-field-day.mp3" type="audio/mpeg">
+  </audio>
+  <script src="script.js"></script>
+</body>
+</html>

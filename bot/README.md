@@ -13,6 +13,9 @@ This bot syncs Discord giveaway management with the website feed in `data/giveaw
 - Supports rerolling winners
 - Stores giveaway message ids, host ids, entrants, and winner ids
 - Includes a `/panel` setup flow for the giveaway announcement channel
+- Accepts website contact form submissions through `/api/contact`
+- Forwards website contact messages into a Discord inbox channel with Components V2
+- Lets you reply back to the matched user through the bot UI
 
 ## Commands
 
@@ -32,6 +35,7 @@ This bot syncs Discord giveaway management with the website feed in `data/giveaw
 4. Start the bot with `npm start`.
 5. Optionally set `DEFAULT_BANNER_URL` if you want a default giveaway banner.
 6. Use `/panel` in Discord and click `Use This Channel` where giveaways should be posted.
+7. Set `CONTACT_INBOX_CHANNEL_ID` to the channel where website contact messages should be forwarded.
 
 ## How the site connection works
 
@@ -39,6 +43,9 @@ This bot syncs Discord giveaway management with the website feed in `data/giveaw
 - The bot writes updates into that same file.
 - The bot stores the configured giveaway channel in `data/bot-config.json`.
 - Any time the JSON changes, the site feed can show the latest giveaways and winners.
+- The website contact form can post to the bot service at `/api/contact`.
+- The bot stores website contact messages in `data/contact-messages.json`.
+- The bot forwards each contact message into the configured Discord inbox channel.
 
 ## Important next upgrades
 

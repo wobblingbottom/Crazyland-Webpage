@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gallery | Crazyland</title>
+  <meta name="description" content="Crazyland gallery page.">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="page-shell">
+    <header class="site-header">
+      <a class="brand" href="index.html">
+        <span class="brand-mark">C</span>
+        <span class="brand-copy">
+          <strong>Crazyland</strong>
+          <small>Portfolio</small>
+        </span>
+      </a>
+
+      <nav class="site-nav" aria-label="Primary">
+        <a href="index.html">Home</a>
+        <a class="current" href="gallery.html">Gallery</a>
+        <a href="commissions.html">Commissions</a>
+        <a href="community.html">Community</a>
+        <a href="contact.html">Contact</a>
+      </nav>
+
+      <div class="header-actions">
+        <button class="audio-toggle" type="button" aria-pressed="false">Sound On</button>
+        <button class="theme-toggle" type="button" aria-pressed="false">Dark Mode</button>
+      </div>
+    </header>
+
+    <main>
+      <section class="page-intro page-transition-target">
+        <h1>Gallery</h1>
+        <p>Content will be added later.</p>
+      </section>
+
+      <section class="content-section page-transition-target">
+        <div class="gallery-toolbar">
+          <button class="filter-button active" type="button">All</button>
+        </div>
+        <article class="content-card empty-state">
+          <p>No gallery items yet.</p>
+        </article>
+      </section>
+    </main>
+  </div>
+
+  <audio class="background-audio" loop preload="auto">
+    <source src="ambient-field-day.mp3" type="audio/mpeg">
+  </audio>
+  <script src="script.js"></script>
+</body>
+</html>

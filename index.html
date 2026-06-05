@@ -3,35 +3,30 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Crazyland Studio</title>
+  <title>Crazyland</title>
   <meta
     name="description"
-    content="Crazyland Studio is a portfolio website for artwork, comics, commissions, and community giveaways."
+    content="Crazyland homepage for artwork, comics, commissions, and community."
   >
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
   <div class="page-shell">
     <header class="site-header">
-      <a class="brand" href="#home">
+      <a class="brand" href="index.html">
         <span class="brand-mark">C</span>
         <span class="brand-copy">
-          <strong>Crazyland Studio</strong>
-          <small>Art, comics, commissions, community</small>
+          <strong>Crazyland</strong>
+          <small>Portfolio</small>
         </span>
       </a>
 
       <nav class="site-nav" aria-label="Primary">
-        <a href="#home">Home</a>
-        <a href="#gallery">Gallery</a>
-        <a href="#commissions">Commissions</a>
-        <a href="#terms">Terms</a>
-        <a href="#queue">Queue</a>
-        <a href="#giveaways">Giveaways</a>
-        <a href="#discord">Discord</a>
-        <a href="#testimonials">Testimonials</a>
-        <a href="#about">About</a>
-        <a href="#contact">Contact</a>
+        <a class="current" href="index.html">Home</a>
+        <a href="gallery.html">Gallery</a>
+        <a href="commissions.html">Commissions</a>
+        <a href="community.html">Community</a>
+        <a href="contact.html">Contact</a>
       </nav>
 
       <div class="header-actions">
@@ -41,300 +36,70 @@
     </header>
 
     <main>
-      <section class="hero-section page-transition-target" id="home">
+      <section class="hero-section page-transition-target">
         <div class="hero-copy">
-          <p class="section-label">Homepage</p>
-          <h1>Crazyland Studio is a place to show artwork, publish comics, run commissions, and share community events.</h1>
-          <p>
-            This site works as a creative home base where visitors can browse your work, read commission details, join
-            your Discord space, and follow live giveaway updates.
-          </p>
+          <p class="section-label">Home</p>
+          <h1>Crazyland</h1>
+          <p class="hero-intro">Artwork, comics, commissions, and community.</p>
           <div class="hero-actions">
-            <a class="button" href="#gallery">View Gallery</a>
-            <a class="button button-secondary" href="#giveaways">Active Giveaways</a>
-            <a class="button" href="#discord">Discord Hub</a>
-            <a class="button button-secondary" href="#contact">Contact</a>
+            <a class="button" href="gallery.html">Enter Gallery</a>
+            <a class="button button-secondary" href="commissions.html">Commission Info</a>
+            <a class="button" href="community.html">Community</a>
           </div>
         </div>
 
-        <div class="hero-card">
-          <p class="section-label">What Visitors Can Do</p>
-          <ul class="feature-list">
-            <li>Browse art by category and open a zoom viewer</li>
-            <li>Check commission info, terms, and queue status</li>
-            <li>See active giveaways and recent winners</li>
-            <li>Join your Discord community from the site</li>
-          </ul>
-        </div>
-      </section>
-
-      <section class="content-section page-transition-target" id="gallery">
-        <div class="section-heading">
-          <p class="section-label">Gallery</p>
-          <h2>Art gallery with categories</h2>
-        </div>
-        <div class="gallery-toolbar">
-          <button class="filter-button active" type="button" data-filter="all">All</button>
-          <button class="filter-button" type="button" data-filter="characters">Character Art</button>
-          <button class="filter-button" type="button" data-filter="comics">Comics</button>
-          <button class="filter-button" type="button" data-filter="illustration">Illustration</button>
-          <button class="filter-button" type="button" data-filter="sketches">Sketches</button>
-        </div>
-        <div class="gallery-grid">
-          <button
-            class="gallery-item"
-            type="button"
-            data-category="characters"
-            data-zoom-title="Character Art"
-            data-zoom-copy="Original characters, portraits, costume concepts, and stylized figure work."
-          >
-            <span class="gallery-thumb"></span>
-            <span class="gallery-meta">
-              <strong>Character Art</strong>
-              <span>Portraits and designs</span>
-            </span>
-          </button>
-          <button
-            class="gallery-item"
-            type="button"
-            data-category="comics"
-            data-zoom-title="Comics"
-            data-zoom-copy="Pages, covers, visual storytelling studies, and chapter-related artwork."
-          >
-            <span class="gallery-thumb"></span>
-            <span class="gallery-meta">
-              <strong>Comics</strong>
-              <span>Pages and covers</span>
-            </span>
-          </button>
-          <button
-            class="gallery-item"
-            type="button"
-            data-category="illustration"
-            data-zoom-title="Illustration"
-            data-zoom-copy="Standalone finished pieces for posters, promotional images, and personal projects."
-          >
-            <span class="gallery-thumb"></span>
-            <span class="gallery-meta">
-              <strong>Illustration</strong>
-              <span>Finished visual work</span>
-            </span>
-          </button>
-          <button
-            class="gallery-item"
-            type="button"
-            data-category="sketches"
-            data-zoom-title="Sketches"
-            data-zoom-copy="Loose experiments, concept drafts, and process work from current ideas."
-          >
-            <span class="gallery-thumb"></span>
-            <span class="gallery-meta">
-              <strong>Sketches</strong>
-              <span>Rough process and ideation</span>
-            </span>
-          </button>
-        </div>
-      </section>
-
-      <section class="content-section page-transition-target" id="commissions">
-        <div class="section-heading">
-          <p class="section-label">Commissions</p>
-          <h2>Commission information</h2>
-        </div>
-        <div class="two-column">
-          <article class="content-card">
-            <p><strong>Available Work</strong></p>
-            <p>Character art, comic covers, promotional illustrations, giveaway art, and selected custom requests.</p>
-            <p><strong>Typical Process</strong></p>
-            <p>Inquiry, quote, sketch approval, final rendering, delivery, and optional public showcase.</p>
+        <div class="hero-panel">
+          <article class="hero-card hero-card-primary">
+            <p class="section-label">Featured</p>
+            <p>Editable highlight.</p>
           </article>
-          <article class="content-card">
-            <p><strong>Best For</strong></p>
-            <p>Clients who can provide a short brief, references, intended usage, and a preferred deadline.</p>
-            <p><strong>Turnaround</strong></p>
-            <p>Smaller requests move faster. Multi-part illustration or comic work needs more time and scheduling.</p>
-          </article>
-        </div>
-      </section>
-
-      <section class="content-section page-transition-target" id="terms">
-        <div class="section-heading">
-          <p class="section-label">Terms of Service</p>
-          <h2>Basic commission terms</h2>
-        </div>
-        <div class="category-grid">
-          <article class="content-card">
-            <p><strong>Payment</strong></p>
-            <p>Projects begin after agreement on price, scope, and schedule.</p>
-          </article>
-          <article class="content-card">
-            <p><strong>Revisions</strong></p>
-            <p>Small revisions are easiest during sketch review before the final rendering stage.</p>
-          </article>
-          <article class="content-card">
-            <p><strong>Usage</strong></p>
-            <p>Commercial and personal usage rights should be clearly agreed before work begins.</p>
-          </article>
-          <article class="content-card">
-            <p><strong>Cancellations</strong></p>
-            <p>If a project stops midway, completed work and time already spent still count toward the agreement.</p>
-          </article>
-        </div>
-      </section>
-
-      <section class="content-section page-transition-target" id="queue">
-        <div class="section-heading">
-          <p class="section-label">Queue</p>
-          <h2>Commission queue and status</h2>
-        </div>
-        <div class="queue-list">
-          <article class="content-card queue-item">
-            <p><strong>Slot 01</strong></p>
-            <p>Status: In progress</p>
-          </article>
-          <article class="content-card queue-item">
-            <p><strong>Slot 02</strong></p>
-            <p>Status: Sketch phase</p>
-          </article>
-          <article class="content-card queue-item">
-            <p><strong>Slot 03</strong></p>
-            <p>Status: Open</p>
-          </article>
-        </div>
-      </section>
-
-      <section class="content-section page-transition-target" id="giveaways">
-        <div class="section-heading">
-          <p class="section-label">Giveaways</p>
-          <h2>Live giveaway status and winners</h2>
-        </div>
-        <div class="two-column">
-          <article class="content-card">
-            <p><strong>Bot-connected giveaway board</strong></p>
-            <p>The site can read active giveaway data and recent winners from a shared JSON feed updated by your Discord bot.</p>
-            <div class="giveaway-feed" aria-live="polite"></div>
-          </article>
-          <article class="content-card">
-            <p><strong>Planned bot features</strong></p>
+          <article class="hero-card">
+            <p class="section-label">Quick Links</p>
             <ul class="feature-list">
-              <li>Create giveaways from Discord commands</li>
-              <li>Show active giveaway titles and countdowns on the page</li>
-              <li>Publish winners to the site automatically after selection</li>
+              <li>Gallery</li>
+              <li>Commissions</li>
+              <li>Giveaways</li>
+              <li>Contact</li>
             </ul>
           </article>
         </div>
       </section>
 
-      <section class="content-section page-transition-target" id="discord">
+      <section class="home-overview page-transition-target" aria-label="Homepage Overview">
+        <article class="overview-card">
+          <p class="section-label">01</p>
+          <h2>Gallery</h2>
+          <p>Editable summary.</p>
+          <a class="text-link" href="gallery.html">Open page</a>
+        </article>
+        <article class="overview-card">
+          <p class="section-label">02</p>
+          <h2>Commissions</h2>
+          <p>Editable summary.</p>
+          <a class="text-link" href="commissions.html">Open page</a>
+        </article>
+        <article class="overview-card">
+          <p class="section-label">03</p>
+          <h2>Community</h2>
+          <p>Editable summary.</p>
+          <a class="text-link" href="community.html">Open page</a>
+        </article>
+      </section>
+
+      <section class="content-section page-transition-target">
         <div class="section-heading">
-          <p class="section-label">Discord</p>
-          <h2>Discord login and server widget</h2>
+          <h2>About the studio</h2>
         </div>
         <div class="two-column">
           <article class="content-card">
-            <p><strong>Discord Login</strong></p>
-            <p>A real Discord login needs your OAuth2 client ID, redirect URL, and backend/session handling.</p>
-            <a class="button" href="https://discord.com/developers/applications" target="_blank" rel="noreferrer">Set Up Discord App</a>
+            <p>Editable text.</p>
           </article>
           <article class="content-card">
-            <p><strong>Discord Server Widget</strong></p>
-            <p>Replace the placeholder server ID below after enabling the Discord widget in your server settings.</p>
-            <iframe
-              class="discord-widget"
-              title="Discord Server Widget"
-              src="https://discord.com/widget?id=000000000000000000&theme=dark"
-              allowtransparency="true"
-              sandbox="allow-popups allow-popups-to-escape-sandbox allow-same-origin allow-scripts"
-            ></iframe>
+            <p>Editable text.</p>
           </article>
-        </div>
-      </section>
-
-      <section class="content-section page-transition-target" id="testimonials">
-        <div class="section-heading">
-          <p class="section-label">Testimonials</p>
-          <h2>What clients say</h2>
-        </div>
-        <div class="category-grid">
-          <article class="content-card">
-            <p>"The final piece looked exactly like the mood we hoped for and communication stayed clear the whole time."</p>
-            <p><strong>Client A</strong></p>
-          </article>
-          <article class="content-card">
-            <p>"The sketch stage was fast, thoughtful, and made the entire commission process feel easy."</p>
-            <p><strong>Client B</strong></p>
-          </article>
-          <article class="content-card">
-            <p>"Great style, strong sense of storytelling, and a final result that felt personal instead of generic."</p>
-            <p><strong>Client C</strong></p>
-          </article>
-        </div>
-      </section>
-
-      <section class="content-section page-transition-target" id="about">
-        <div class="section-heading">
-          <p class="section-label">About</p>
-          <h2>About the artist and the work</h2>
-        </div>
-        <div class="two-column">
-          <article class="content-card">
-            <p>
-              Crazyland Studio is built for sharing illustration, comics, experiments, client work, and community-facing
-              events in one place.
-            </p>
-          </article>
-          <article class="content-card">
-            <p>
-              Use this page to introduce your style, your influences, the stories you want to tell, and the kind of
-              creative community you want to build around the work.
-            </p>
-          </article>
-        </div>
-      </section>
-
-      <section class="content-section page-transition-target" id="contact">
-        <div class="section-heading">
-          <p class="section-label">Contact</p>
-          <h2>Get in touch</h2>
-        </div>
-
-        <div class="contact-layout">
-          <article class="content-card">
-            <p><strong>Email</strong></p>
-            <p>hello@crazylandstudio.com</p>
-            <p><strong>Purpose</strong></p>
-            <p>Commission requests, collaborations, giveaway partnerships, and general questions.</p>
-          </article>
-
-          <form class="contact-form">
-            <label>
-              Name
-              <input type="text" name="name" placeholder="Your name">
-            </label>
-            <label>
-              Email
-              <input type="email" name="email" placeholder="name@example.com">
-            </label>
-            <label class="full-width">
-              Message
-              <textarea name="message" rows="6" placeholder="Write your message here."></textarea>
-            </label>
-            <button class="button" type="submit">Send Message</button>
-            <p class="form-note" aria-live="polite"></p>
-          </form>
         </div>
       </section>
     </main>
-  </div>
-
-  <div class="zoom-viewer" hidden>
-    <div class="zoom-backdrop" data-close-zoom></div>
-    <div class="zoom-dialog" role="dialog" aria-modal="true" aria-labelledby="zoom-title">
-      <button class="zoom-close" type="button" data-close-zoom>Close</button>
-      <div class="zoom-preview"></div>
-      <h3 id="zoom-title"></h3>
-      <p class="zoom-copy"></p>
-    </div>
   </div>
 
   <audio class="background-audio" loop preload="auto">

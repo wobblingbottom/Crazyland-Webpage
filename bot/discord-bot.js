@@ -1,3 +1,4 @@
+import http from "node:http";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -12,12 +13,15 @@ import {
   GatewayIntentBits,
   MediaGalleryBuilder,
   MessageFlags,
+  ModalBuilder,
   REST,
   Routes,
   SectionBuilder,
   SeparatorBuilder,
   SlashCommandBuilder,
-  TextDisplayBuilder
+  TextDisplayBuilder,
+  TextInputBuilder,
+  TextInputStyle
 } from "discord.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -65,6 +69,9 @@ const config = {
   guildId: process.env.GUILD_ID,
   dataFile: resolve(rootDir, process.env.GIVEAWAYS_FILE || "data/giveaways.json"),
   settingsFile: resolve(rootDir, process.env.BOT_SETTINGS_FILE || "data/bot-config.json"),
+  contactFile: resolve(rootDir, process.env.CONTACT_MESSAGES_FILE || "data/contact-messages.json"),
+  contactInboxChannelId: process.env.CONTACT_INBOX_CHANNEL_ID || "",
+  port: Number(process.env.PORT || process.env.CONTACT_API_PORT || 3000),
   defaultBannerUrl:
     process.env.DEFAULT_BANNER_URL ||
     "https://raw.githubusercontent.com/wobblingbottom/Crazyland-Webpage/main/banner.png"
@@ -333,6 +340,115 @@ const ensureDataFile = () => {
   ensureJsonFile(config.dataFile, { giveaways: [] });
 };
 
+const ensureContactFile = () => {
+  ensureJsonFile(config.contactFile, { messages: [] });
+};
+
+const readContactMessages = () => {
+  ensureContactFile();
+  const raw = readFileSync(config.contactFile, "utf8");
+  const parsed = JSON.parse(raw);
+  return Array.isArray(parsed.messages) ? parsed : { messages: [] };
+};
+
+const writeContactMessages = (data) => {
+  writeFileSync(config.contactFile, `${JSON.stringify(data, null, 2)}\n`, "utf8");
+};
+
+const createContactId = () => `msg-${Date.now().toString(36)}`;
+
+const buildContactInboxComponents = (entry) => {
+  const container = new ContainerBuilder();
+  container.addTextDisplayComponents(
+    new TextDisplayBuilder().setContent("### Website Contact")
+  );
+  container.addSeparatorComponents(new SeparatorBuilder().setDivider(true));
+  container.addTextDisplayComponents(
+    new TextDisplayBuilder().setContent(`**Name:** ${entry.name || "Not provided"}`),
+    new TextDisplayBuilder().setContent(`**Discord:** ${entry.discordUsername}`),
+    new TextDisplayBuilder().setContent(`**Status:** ${entry.status}`),
+    new TextDisplayBuilder().setContent(`**Received:** <t:${Math.floor(new Date(entry.createdAt).getTime() / 1000)}:f>`),
+    new TextDisplayBuilder().setContent(entry.message)
+  );
+
+  const buttons = new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId(`contact_reply:${entry.id}`)
+      .setLabel("Reply")
+      .setStyle(ButtonStyle.Primary)
+      .setDisabled(!entry.discordUserId || entry.status === "Closed"),
+    new ButtonBuilder()
+      .setCustomId(`contact_done:${entry.id}`)
+      .setLabel(entry.status === "Closed" ? "Closed" : "Mark Done")
+      .setStyle(ButtonStyle.Secondary)
+      .setDisabled(entry.status === "Closed")
+  );
+
+  return [container, buttons];
+};
+
+const syncContactInboxMessage = async (entry) => {
+  if (!entry.inboxChannelId || !entry.inboxMessageId) {
+    return;
+  }
+
+  const channel = await client.channels.fetch(entry.inboxChannelId);
+
+  if (!channel?.isTextBased()) {
+    return;
+  }
+
+  const message = await channel.messages.fetch(entry.inboxMessageId);
+  await message.edit({
+    flags: MessageFlags.IsComponentsV2,
+    components: buildContactInboxComponents(entry)
+  });
+};
+
+const getContactInboxChannel = async () => {
+  if (!config.contactInboxChannelId) {
+    return null;
+  }
+
+  const channel = await client.channels.fetch(config.contactInboxChannelId);
+  return channel?.isTextBased() ? channel : null;
+};
+
+const findGuildMemberByDiscordName = async (discordUsername) => {
+  const guild = await client.guilds.fetch(config.guildId);
+  const members = await guild.members.fetch();
+  const normalized = discordUsername.trim().toLowerCase();
+
+  const matches = members.filter((member) => {
+    const username = member.user.username?.toLowerCase();
+    const globalName = member.user.globalName?.toLowerCase();
+    const displayName = member.displayName?.toLowerCase();
+    return username === normalized || globalName === normalized || displayName === normalized;
+  });
+
+  if (matches.size !== 1) {
+    return null;
+  }
+
+  return matches.first() || null;
+};
+
+const forwardContactMessage = async (entry) => {
+  const inboxChannel = await getContactInboxChannel();
+
+  if (!inboxChannel) {
+    throw new Error("Contact inbox channel is not configured.");
+  }
+
+  const message = await inboxChannel.send({
+    flags: MessageFlags.IsComponentsV2,
+    components: buildContactInboxComponents(entry)
+  });
+
+  entry.inboxChannelId = inboxChannel.id;
+  entry.inboxMessageId = message.id;
+};
+
 const getGiveawayChannel = async (fallbackChannelId) => {
   const settings = readSettings();
   const targetChannelId = settings.giveawayChannelId || fallbackChannelId;
@@ -536,11 +652,102 @@ const registerCommands = async () => {
   );
 };
 
-const client = new Client({ intents: [GatewayIntentBits.Guilds] });
+const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers] });
+
+const requestHandler = async (req, res) => {
+  const sendJson = (statusCode, body) => {
+    res.writeHead(statusCode, {
+      "Content-Type": "application/json",
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type"
+    });
+    res.end(JSON.stringify(body));
+  };
+
+  if (req.method === "OPTIONS") {
+    sendJson(204, {});
+    return;
+  }
+
+  if (req.method === "GET" && req.url === "/api/contact") {
+    sendJson(200, { ok: true });
+    return;
+  }
+
+  if (req.method !== "POST" || req.url !== "/api/contact") {
+    sendJson(404, { error: "Not found." });
+    return;
+  }
+
+  let raw = "";
+  req.on("data", (chunk) => {
+    raw += chunk;
+  });
+
+  req.on("end", async () => {
+    try {
+      const payload = JSON.parse(raw || "{}");
+      const name = String(payload.name || "").trim();
+      const discordUsername = String(payload.discordUsername || "").trim();
+      const message = String(payload.message || "").trim();
+
+      if (!discordUsername || !message) {
+        sendJson(400, { error: "Discord username and message are required." });
+        return;
+      }
+
+      const member = await findGuildMemberByDiscordName(discordUsername);
+
+      if (!member) {
+        sendJson(400, {
+          error: "Discord username could not be matched in the server. Use your exact server username/display name."
+        });
+        return;
+      }
+
+      const data = readContactMessages();
+      const entry = {
+        id: createContactId(),
+        name,
+        discordUsername,
+        discordUserId: member.id,
+        message,
+        status: "Open",
+        createdAt: new Date().toISOString(),
+        inboxChannelId: "",
+        inboxMessageId: ""
+      };
+
+      await forwardContactMessage(entry);
+      data.messages.unshift(entry);
+      writeContactMessages(data);
+
+      sendJson(200, { ok: true, id: entry.id });
+    } catch (error) {
+      console.error("Contact API error:", error);
+      sendJson(500, { error: "Message failed." });
+    }
+  });
+};
+
+const apiServer = http.createServer((req, res) => {
+  requestHandler(req, res).catch((error) => {
+    console.error("Unhandled contact server error:", error);
+    res.writeHead(500, {
+      "Content-Type": "application/json",
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type"
+    });
+    res.end(JSON.stringify({ error: "Server error." }));
+  });
+});
 
 client.once("clientReady", () => {
   console.log(`Logged in as ${client.user.tag}`);
   console.log(`Website giveaway file: ${config.dataFile}`);
+  console.log(`Contact message file: ${config.contactFile}`);
   setInterval(() => {
     closeExpiredGiveaways().catch((error) => {
       console.error("Automatic giveaway close failed:", error);
@@ -552,6 +759,42 @@ client.on("interactionCreate", async (interaction) => {
   try {
     if (interaction.isButton()) {
       const [action, giveawayId] = interaction.customId.split(":");
+
+      if (action === "contact_reply") {
+        const modal = new ModalBuilder()
+          .setCustomId(`contact_reply_modal:${giveawayId}`)
+          .setTitle("Reply to Contact");
+
+        modal.addComponents(
+          new ActionRowBuilder().addComponents(
+            new TextInputBuilder()
+              .setCustomId("reply_message")
+              .setLabel("Reply")
+              .setStyle(TextInputStyle.Paragraph)
+              .setRequired(true)
+              .setMaxLength(1800)
+          )
+        );
+
+        await interaction.showModal(modal);
+        return;
+      }
+
+      if (action === "contact_done") {
+        const contactData = readContactMessages();
+        const entry = contactData.messages.find((item) => item.id === giveawayId);
+
+        if (!entry) {
+          await replyWithCommandBox(interaction, "Contact Reply", ["Message not found."], { ephemeral: true });
+          return;
+        }
+
+        entry.status = "Closed";
+        writeContactMessages(contactData);
+        await syncContactInboxMessage(entry);
+        await replyWithCommandBox(interaction, "Contact Reply", ["Message marked as closed."], { ephemeral: true });
+        return;
+      }
 
       if (action === "panel_set_giveaway_channel") {
         const settings = readSettings();
@@ -667,6 +910,44 @@ client.on("interactionCreate", async (interaction) => {
         [`You are entered in "${giveaway.title}".`],
         { ephemeral: true }
       );
+      return;
+    }
+
+    if (interaction.isModalSubmit()) {
+      const [action, contactId] = interaction.customId.split(":");
+
+      if (action !== "contact_reply_modal") {
+        return;
+      }
+
+      const contactData = readContactMessages();
+      const entry = contactData.messages.find((item) => item.id === contactId);
+
+      if (!entry) {
+        await interaction.reply({
+          flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
+          components: buildCommandBox("Contact Reply", ["Message not found."])
+        });
+        return;
+      }
+
+      const replyMessage = interaction.fields.getTextInputValue("reply_message").trim();
+      const user = await client.users.fetch(entry.discordUserId);
+
+      await user.send({
+        flags: MessageFlags.IsComponentsV2,
+        components: buildCommandBox("Reply from Crazyland", [replyMessage])
+      });
+
+      entry.status = "Replied";
+      entry.reply = replyMessage;
+      entry.repliedAt = new Date().toISOString();
+      writeContactMessages(contactData);
+      await syncContactInboxMessage(entry);
+      await interaction.reply({
+        flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
+        components: buildCommandBox("Contact Reply", [`Sent reply to ${entry.discordUsername}.`])
+      });
       return;
     }
 
@@ -961,8 +1242,12 @@ client.on("interactionCreate", async (interaction) => {
 const bootstrap = async () => {
   ensureDataFile();
   ensureSettingsFile();
+  ensureContactFile();
   await registerCommands();
   await client.login(config.token);
+  apiServer.listen(config.port, () => {
+    console.log(`Contact API listening on port ${config.port}`);
+  });
 };
 
 bootstrap().catch((error) => {
