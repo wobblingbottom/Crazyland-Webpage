@@ -22,6 +22,7 @@
       <nav class="site-nav" aria-label="Primary">
         <a href="index.html">Home</a>
         <a href="gallery.html">Gallery</a>
+        <a href="comics.html">Comics</a>
         <a href="commissions.html">Commissions</a>
         <a href="community.html">Community</a>
         <a class="current" href="contact.html">Contact</a>
@@ -29,72 +30,50 @@
 
       <div class="header-actions">
         <button class="audio-toggle" type="button" aria-pressed="false">Sound On</button>
-        <button class="theme-toggle" type="button" aria-pressed="false">Dark Mode</button>
+        <button class="theme-toggle" type="button" aria-pressed="false" aria-label="Dark Mode"></button>
       </div>
     </header>
 
-    <main>
-      <section class="page-intro page-transition-target">
-        <h1>Contact and about</h1>
-        <p>Reach out and add your studio details here.</p>
-      </section>
-
-      <section class="content-section page-transition-target">
-        <div class="section-heading">
-          <h2>About</h2>
-        </div>
-        <div class="two-column">
-          <article class="content-card"><p>Editable text.</p></article>
-          <article class="content-card"><p>Editable text.</p></article>
-        </div>
-      </section>
-
-      <section class="content-section page-transition-target">
-        <div class="section-heading">
-          <h2>Get in touch</h2>
+    <main class="contact-page">
+      <section class="contact-page-card page-transition-target" aria-label="Contact form">
+        <div class="contact-page-copy">
+          <h1>Contact</h1>
+          <p>Send a message here and the Discord bot will forward it.</p>
+          <p>Your Discord username is required so I can reply back through the bot.</p>
         </div>
 
-        <div class="contact-layout">
-          <article class="content-card">
-            <p><strong>Choose contact method</strong></p>
-            <div class="contact-methods" role="radiogroup" aria-label="Contact method">
-              <label class="contact-method">
-                <input type="radio" name="contact_method" value="website" checked>
-                <span>Website Message</span>
-              </label>
-              <label class="contact-method">
-                <input type="radio" name="contact_method" value="discord">
-                <span>Discord DM</span>
-              </label>
-            </div>
-            <div class="contact-option is-active" data-contact-option="website">
-              <p><strong>Website Message</strong></p>
-              <p>Send a message here and the bot will forward it to Discord.</p>
-            </div>
-            <div class="contact-option" data-contact-option="discord">
-              <p><strong>Discord DM</strong></p>
-              <p>Add or message me on Discord directly: <strong>@Duke Wobblebottom</strong></p>
-              <a class="button" href="https://discord.com/channels/@me" target="_blank" rel="noreferrer">Open Discord</a>
-            </div>
-          </article>
-
-          <form class="contact-form" data-contact-endpoint>
-            <label>
-              Name
-              <input type="text" name="name" placeholder="Your name">
-            </label>
-            <label class="full-width">
-              Discord Username
-              <input type="text" name="discord_username" placeholder="yourusername">
-            </label>
-            <label class="full-width">
-              Message
-              <textarea name="message" rows="6" placeholder="Write your message here."></textarea>
-            </label>
-            <button class="button" type="submit">Send Message</button>
-            <p class="form-note" aria-live="polite"></p>
-          </form>
-        </div>
+        <form class="contact-form" data-contact-endpoint autocomplete="off">
+          <label>
+            Name
+            <input type="text" name="name" placeholder="Your name" autocomplete="off" spellcheck="false">
+          </label>
+          <label class="full-width">
+            Discord Username
+            <input
+              type="text"
+              name="discord_username"
+              placeholder="yourusername"
+              autocomplete="off"
+              autocapitalize="off"
+              autocorrect="off"
+              spellcheck="false"
+            >
+          </label>
+          <label class="full-width">
+            Message
+            <textarea
+              name="message"
+              rows="6"
+              placeholder="Write your message here."
+              autocomplete="off"
+              autocapitalize="off"
+              autocorrect="off"
+              spellcheck="false"
+            ></textarea>
+          </label>
+          <button class="button" type="submit">Send Message</button>
+          <p class="form-note" aria-live="polite"></p>
+        </form>
       </section>
     </main>
   </div>

@@ -3,6 +3,7 @@ const audioToggle = document.querySelector(".audio-toggle");
 const backgroundAudio = document.querySelector(".background-audio");
 const contactForm = document.querySelector(".contact-form");
 const formNote = document.querySelector(".form-note");
+const autoGrowTextareas = document.querySelectorAll("textarea");
 const contactMethodInputs = document.querySelectorAll('input[name="contact_method"]');
 const contactOptions = document.querySelectorAll("[data-contact-option]");
 const filterButtons = document.querySelectorAll(".filter-button");
@@ -39,7 +40,8 @@ const applyThemeLabel = () => {
   const darkModeEnabled = document.body.classList.contains("dark-mode");
 
   if (themeToggle) {
-    themeToggle.textContent = darkModeEnabled ? "Light Mode" : "Dark Mode";
+    themeToggle.setAttribute("aria-label", darkModeEnabled ? "Light Mode" : "Dark Mode");
+    themeToggle.setAttribute("title", darkModeEnabled ? "Light Mode" : "Dark Mode");
     themeToggle.setAttribute("aria-pressed", String(darkModeEnabled));
   }
 };
@@ -253,6 +255,16 @@ const renderGiveawayFeed = async () => {
 };
 
 renderGiveawayFeed();
+const resizeTextarea = (textarea) => {
+  textarea.style.height = "auto";
+  textarea.style.height = `${textarea.scrollHeight}px`;
+};
+
+autoGrowTextareas.forEach((textarea) => {
+  resizeTextarea(textarea);
+  textarea.addEventListener("input", () => resizeTextarea(textarea));
+});
+
 const applyContactMethod = (value) => {
   contactOptions.forEach((option) => {
     option.classList.toggle("is-active", option.dataset.contactOption === value);

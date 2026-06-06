@@ -140,8 +140,6 @@ a {
 .site-header,
 .content-card,
 .contact-form,
-.hero-card,
-.overview-card,
 .gallery-item,
 .zoom-dialog,
 .giveaway-card {
@@ -301,6 +299,23 @@ h3::before,
   border-radius: 8px;
 }
 
+.theme-toggle {
+  width: 2.85rem;
+  min-width: 2.85rem;
+  padding: 0;
+}
+
+.theme-toggle::before {
+  content: "";
+  width: 1.5rem;
+  height: 1.5rem;
+  background: url("./Moon.png") center / contain no-repeat;
+}
+
+body.dark-mode .theme-toggle::before {
+  background-image: url("./Sun.png");
+}
+
 .button-secondary,
 .filter-button.active {
   background: var(--text);
@@ -324,17 +339,11 @@ h3::before,
   margin: 0;
 }
 
-.hero-card,
-.overview-card,
 .content-card,
 .contact-form,
 .giveaway-card,
 .zoom-dialog {
   padding: 1rem;
-}
-
-.hero-card {
-  min-height: 100%;
 }
 
 .hero-card-primary {
@@ -350,23 +359,27 @@ h3::before,
 
 .home-overview {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 1rem;
   margin-top: 1rem;
 }
 
-.overview-card {
+.overview-item {
   display: grid;
   gap: 0.85rem;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  border-radius: 10px;
 }
 
-.overview-card h2,
+.overview-item h2,
 .section-heading h2,
 .zoom-dialog h3 {
   margin: 0;
 }
 
-.overview-card p:last-child,
+.overview-item p:last-child,
 .content-card p:last-child {
   margin-bottom: 0;
 }
@@ -383,10 +396,186 @@ h3::before,
   display: grid;
   place-items: center;
   text-align: center;
+  border: 1px dashed var(--border);
+  border-radius: 10px;
 }
 
 .content-section {
   margin-top: 1rem;
+}
+
+.gallery-page {
+  margin-top: 2.5rem;
+}
+
+.comics-page {
+  margin-top: 2.5rem;
+}
+
+.commissions-page {
+  margin-top: 2.5rem;
+}
+
+.contact-page {
+  margin-top: 2.5rem;
+}
+
+.gallery-post-grid {
+  width: min(1030px, 100%);
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 3.5rem 3.75rem;
+  padding: 1rem 0 0;
+}
+
+.gallery-post-card {
+  aspect-ratio: 1 / 1;
+  border: 1px solid var(--border);
+  border-radius: 0;
+  background: var(--surface);
+  display: grid;
+  place-items: center;
+  color: #111111;
+  font-size: clamp(1.35rem, 1.6vw, 1.9rem);
+}
+
+.comic-list {
+  width: min(1030px, 100%);
+  margin: 0 auto;
+  display: grid;
+  gap: 3.5rem;
+  padding: 1rem 0 0;
+}
+
+.comic-card {
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr) 170px;
+  align-items: start;
+  gap: 2rem;
+  padding: 1.9rem;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: #111111;
+}
+
+.comic-cover {
+  aspect-ratio: 1 / 1;
+  background: rgba(127, 127, 127, 0.22);
+}
+
+.comic-copy {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.comic-copy h2,
+.comic-copy p,
+.comic-episodes {
+  margin: 0;
+}
+
+.comic-copy h2::before {
+  display: none;
+}
+
+.comic-copy h2 {
+  color: #111111;
+  font-size: clamp(2rem, 3vw, 3rem);
+  line-height: 1;
+}
+
+.comic-copy p,
+.comic-episodes {
+  color: #111111;
+  font-size: clamp(1.15rem, 1.5vw, 1.45rem);
+}
+
+.comic-episodes {
+  text-align: right;
+  padding-top: 0.4rem;
+}
+
+.commission-list {
+  width: min(1030px, 100%);
+  margin: 0 auto;
+  display: grid;
+  gap: 3.5rem;
+  padding: 1rem 0 0;
+}
+
+.commission-card {
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr) 170px;
+  align-items: start;
+  gap: 2rem;
+  padding: 1.9rem;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: #111111;
+}
+
+.commission-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.commission-thumb {
+  aspect-ratio: 1 / 1;
+  background: rgba(127, 127, 127, 0.22);
+}
+
+.commission-copy {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.commission-copy h2,
+.commission-copy p,
+.commission-price {
+  margin: 0;
+}
+
+.commission-copy h2::before {
+  display: none;
+}
+
+.commission-copy h2 {
+  color: #111111;
+  font-size: clamp(2rem, 3vw, 3rem);
+  line-height: 1;
+}
+
+.commission-copy p,
+.commission-price {
+  color: #111111;
+  font-size: clamp(1.15rem, 1.5vw, 1.45rem);
+}
+
+.commission-price {
+  text-align: right;
+  padding-top: 0.4rem;
+}
+
+.contact-page-card {
+  width: min(880px, 100%);
+  margin: 0 auto;
+  display: grid;
+  gap: 1.5rem;
+  padding: 1.9rem;
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.contact-page-copy {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.contact-page-copy h1,
+.contact-page-copy p {
+  margin: 0;
 }
 
 .section-heading {
@@ -404,6 +593,10 @@ h3::before,
 
 .tos-grid {
   align-items: start;
+}
+
+.tos-card {
+  margin-bottom: 1rem;
 }
 
 .contact-methods {
@@ -506,8 +699,36 @@ textarea {
   border-radius: 8px;
 }
 
+input:focus,
+textarea:focus {
+  outline: none;
+  border-color: #f45f77;
+  box-shadow:
+    0 0 0 2px rgba(127, 127, 127, 0.22);
+}
+
+body.dark-mode input:focus,
+body.dark-mode textarea:focus {
+  border-color: #f45f77;
+  box-shadow:
+    0 0 0 2px #ffffff,
+    0 0 0 5px #f45f77;
+}
+
+body.dark-mode input,
+body.dark-mode textarea,
+body.dark-mode .button,
+body.dark-mode .audio-toggle,
+body.dark-mode .theme-toggle,
+body.dark-mode .filter-button,
+body.dark-mode .zoom-close {
+  background: #ffffff;
+  color: #f45f77;
+}
+
 textarea {
-  resize: vertical;
+  resize: none;
+  overflow: hidden;
 }
 
 .form-note {
@@ -579,8 +800,35 @@ textarea {
   .contact-layout,
   .category-grid,
   .queue-list,
-  .gallery-grid {
+  .gallery-grid,
+  .gallery-post-grid {
     grid-template-columns: 1fr;
+  }
+
+  .comic-card {
+    grid-template-columns: 1fr;
+  }
+
+  .commission-card {
+    grid-template-columns: 1fr;
+  }
+
+  .comic-cover {
+    max-width: 240px;
+  }
+
+  .comic-episodes {
+    text-align: left;
+    padding-top: 0;
+  }
+
+  .commission-preview-grid {
+    max-width: 240px;
+  }
+
+  .commission-price {
+    text-align: left;
+    padding-top: 0;
   }
 
   .site-header {
