@@ -465,7 +465,7 @@ const buildContactInboxComponents = (entry) => {
     new TextDisplayBuilder().setContent(entry.message)
   ];
 
-  if (entry.image) {
+  if (entry.hasImage) {
     lines.push(new TextDisplayBuilder().setContent("**Image:** Attached below."));
   }
 
@@ -627,16 +627,17 @@ const forwardContactMessage = async (entry) => {
     throw new Error("Contact inbox channel is not configured.");
   }
 
-  const contactImageFile = imagePayloadToFile(entry.image, `contact-${entry.id}.png`);
+  const contactInboxImageFile = imagePayloadToFile(entry.image, `contact-${entry.id}.png`);
 
   const message = await inboxChannel.send({
     flags: MessageFlags.IsComponentsV2,
     components: buildContactInboxComponents(entry),
-    files: contactImageFile ? [contactImageFile] : []
+    files: contactInboxImageFile ? [contactInboxImageFile] : []
   });
 
   entry.inboxChannelId = inboxChannel.id;
   entry.inboxMessageId = message.id;
+  entry.hasImage = Boolean(contactInboxImageFile);
 
   if ("startThread" in message) {
     const thread = await message.startThread({
@@ -645,6 +646,7 @@ const forwardContactMessage = async (entry) => {
     });
 
     entry.threadChannelId = thread.id;
+    const contactThreadImageFile = imagePayloadToFile(entry.image, `contact-${entry.id}.png`);
 
     await thread.send({
       flags: MessageFlags.IsComponentsV2,
@@ -652,10 +654,12 @@ const forwardContactMessage = async (entry) => {
         `**Name:** ${entry.name || "Not provided"}`,
         `**Discord:** ${entry.discordUsername}`,
         entry.message
-      ], Boolean(contactImageFile)),
-      files: contactImageFile ? [contactImageFile] : []
+      ], Boolean(contactThreadImageFile)),
+      files: contactThreadImageFile ? [contactThreadImageFile] : []
     });
   }
+
+  delete entry.image;
 };
 
 const exchangeDiscordCode = async (code) => {
@@ -1083,7 +1087,8 @@ const requestHandler = async (req, res) => {
         inboxChannelId: "",
         inboxMessageId: "",
         threadChannelId: "",
-        image
+        image,
+        hasImage: Boolean(image)
       };
 
       await forwardContactMessage(entry);
