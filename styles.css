@@ -593,6 +593,61 @@ body.dark-mode .theme-toggle::before {
   gap: 0.75rem;
 }
 
+.file-upload {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.file-upload-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
+
+.file-upload-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.85rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.file-upload-name {
+  min-width: 0;
+  color: var(--copy);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file-upload:focus-within .file-upload-button {
+  border-color: #f45f77;
+  box-shadow: 0 0 0 2px rgba(127, 127, 127, 0.22);
+}
+
+body.dark-mode .file-upload-button {
+  background: #ffffff;
+  color: #f45f77;
+}
+
+body.dark-mode .file-upload:focus-within .file-upload-button {
+  box-shadow:
+    0 0 0 2px #ffffff,
+    0 0 0 5px #f45f77;
+}
+
 .section-heading {
   margin-bottom: 1rem;
   display: grid;

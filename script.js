@@ -6,6 +6,8 @@ const formNote = document.querySelector(".form-note");
 const contactAuthStatus = document.querySelector(".contact-auth-status");
 const discordLoginButton = document.querySelector("[data-discord-login]");
 const discordLogoutButton = document.querySelector("[data-discord-logout]");
+const fileUploadInput = document.querySelector(".file-upload-input");
+const fileUploadName = document.querySelector(".file-upload-name");
 const autoGrowTextareas = document.querySelectorAll("textarea");
 const contactMethodInputs = document.querySelectorAll('input[name="contact_method"]');
 const contactOptions = document.querySelectorAll("[data-contact-option]");
@@ -386,6 +388,16 @@ discordLogoutButton?.addEventListener("click", async () => {
   if (formNote) {
     formNote.textContent = "";
   }
+});
+
+fileUploadInput?.addEventListener("change", () => {
+  const fileName = fileUploadInput.files?.[0]?.name;
+
+  if (!fileUploadName) {
+    return;
+  }
+
+  fileUploadName.textContent = fileName || "No image selected";
 });
 
 const renderGiveawayFeed = async () => {
