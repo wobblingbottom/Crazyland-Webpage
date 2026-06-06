@@ -23,6 +23,13 @@ const audioStorageKey = "crazyland-audio";
 const audioTimeStorageKey = "crazyland-audio-time";
 const contactTokenStorageKey = "crazyland-contact-token";
 let contactAuthToken = window.localStorage.getItem(contactTokenStorageKey) || "";
+const readFileAsDataUrl = (file) =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(new Error("Image could not be read."));
+    reader.readAsDataURL(file);
+  });
 const createDotSnowfield = () => {
   const snowfield = document.createElement("div");
   snowfield.className = "dot-snowfield";
@@ -266,12 +273,13 @@ const handleDiscordTokenFromUrl = () => {
   window.history.replaceState({}, "", nextUrl);
 };
 
-contactForm?.addEventListener("submit", (event) => {
+contactForm?.addEventListener("submit", async (event) => {
   event.preventDefault();
 
   const endpoint = contactApiMeta?.content?.trim();
   const name = contactForm.elements.namedItem("name")?.value.trim();
   const message = contactForm.elements.namedItem("message")?.value.trim();
+  const imageFile = contactForm.elements.namedItem("image")?.files?.[0];
 
   if (!endpoint || endpoint.includes("your-bot-service")) {
     formNote.textContent = "Set your bot API URL first.";
@@ -288,6 +296,31 @@ contactForm?.addEventListener("submit", (event) => {
     return;
   }
 
+  let image = null;
+
+  if (imageFile) {
+    if (!imageFile.type.startsWith("image/")) {
+      formNote.textContent = "Use an image file.";
+      return;
+    }
+
+    if (imageFile.size > 8 * 1024 * 1024) {
+      formNote.textContent = "Image must be 8MB or smaller.";
+      return;
+    }
+
+    try {
+      image = {
+        name: imageFile.name,
+        type: imageFile.type,
+        dataUrl: await readFileAsDataUrl(imageFile)
+      };
+    } catch (error) {
+      formNote.textContent = error.message || "Image could not be read.";
+      return;
+    }
+  }
+
   formNote.textContent = "Sending...";
 
   fetch(endpoint, {
@@ -298,7 +331,8 @@ contactForm?.addEventListener("submit", (event) => {
     },
     body: JSON.stringify({
       name,
-      message
+      message,
+      image
     })
   })
     .then(async (response) => {

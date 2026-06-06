@@ -102,6 +102,33 @@ const NUMBER_EMOJIS = {
 const emojifyDigits = (value) =>
   String(value).replace(/\d/g, (digit) => NUMBER_EMOJIS[digit] || digit);
 
+const imagePayloadToFile = (image, fallbackName = "image.png") => {
+  if (!image?.dataUrl || typeof image.dataUrl !== "string") {
+    return null;
+  }
+
+  const match = image.dataUrl.match(/^data:(.+?);base64,(.+)$/);
+
+  if (!match) {
+    return null;
+  }
+
+  const [, mimeType, base64Data] = match;
+  const extension = mimeType.split("/")[1] || "png";
+  const safeName = image.name || fallbackName || `image.${extension}`;
+
+  return {
+    attachment: Buffer.from(base64Data, "base64"),
+    name: safeName
+  };
+};
+
+const attachmentUrlFiles = (attachments) =>
+  attachments.map((attachment, index) => ({
+    attachment: attachment.url,
+    name: attachment.name || `image-${index + 1}`
+  }));
+
 const createAuthToken = () => crypto.randomBytes(24).toString("hex");
 const createNonce = () => crypto.randomUUID();
 
@@ -425,18 +452,24 @@ const writeContactMessages = (data) => {
 const createContactId = () => `msg-${Date.now().toString(36)}`;
 
 const buildContactInboxComponents = (entry) => {
-  const container = new ContainerBuilder();
+  const container = new ContainerBuilder().setAccentColor(0xf45f77);
   container.addTextDisplayComponents(
     new TextDisplayBuilder().setContent("### Website Contact")
   );
   container.addSeparatorComponents(new SeparatorBuilder().setDivider(true));
-  container.addTextDisplayComponents(
+  const lines = [
     new TextDisplayBuilder().setContent(`**Name:** ${entry.name || "Not provided"}`),
     new TextDisplayBuilder().setContent(`**Discord:** ${entry.discordUsername}`),
     new TextDisplayBuilder().setContent(`**Status:** ${entry.status}`),
     new TextDisplayBuilder().setContent(`**Received:** <t:${Math.floor(new Date(entry.createdAt).getTime() / 1000)}:f>`),
     new TextDisplayBuilder().setContent(entry.message)
-  );
+  ];
+
+  if (entry.image) {
+    lines.push(new TextDisplayBuilder().setContent("**Image:** Attached below."));
+  }
+
+  container.addTextDisplayComponents(...lines);
 
   const buttons = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
@@ -454,23 +487,29 @@ const buildContactInboxComponents = (entry) => {
   return [container, buttons];
 };
 
-const buildContactReturnComponents = (entry, messageText) => {
-  const container = new ContainerBuilder();
+const buildContactReturnComponents = (entry, messageText, hasImage = false) => {
+  const container = new ContainerBuilder().setAccentColor(0xf45f77);
   container.addTextDisplayComponents(
     new TextDisplayBuilder().setContent("### Discord Reply")
   );
   container.addSeparatorComponents(new SeparatorBuilder().setDivider(true));
-  container.addTextDisplayComponents(
+  const lines = [
     new TextDisplayBuilder().setContent(`**From:** ${entry.discordUsername}`),
     new TextDisplayBuilder().setContent(`**Contact:** ${entry.id}`),
     new TextDisplayBuilder().setContent(`**Received:** <t:${Math.floor(Date.now() / 1000)}:f>`),
     new TextDisplayBuilder().setContent(messageText)
-  );
+  ];
+
+  if (hasImage) {
+    lines.push(new TextDisplayBuilder().setContent("**Image:** Attached below."));
+  }
+
+  container.addTextDisplayComponents(...lines);
   return [container];
 };
 
-const buildContactThreadComponents = (title, lines = []) => {
-  const container = new ContainerBuilder();
+const buildContactThreadComponents = (title, lines = [], hasImage = false) => {
+  const container = new ContainerBuilder().setAccentColor(0xf45f77);
   container.addTextDisplayComponents(
     new TextDisplayBuilder().setContent(`### ${title}`)
   );
@@ -479,6 +518,12 @@ const buildContactThreadComponents = (title, lines = []) => {
     container.addSeparatorComponents(new SeparatorBuilder().setDivider(true));
     container.addTextDisplayComponents(
       ...lines.map((line) => new TextDisplayBuilder().setContent(line))
+    );
+  }
+
+  if (hasImage) {
+    container.addTextDisplayComponents(
+      new TextDisplayBuilder().setContent("**Image:** Attached below.")
     );
   }
 
@@ -512,7 +557,7 @@ const getContactThreadChannel = async (entry) => {
   return channel?.isTextBased() ? channel : null;
 };
 
-const sendContactThreadMessage = async (entry, title, lines) => {
+const sendContactThreadMessage = async (entry, title, lines, files = []) => {
   const thread = await getContactThreadChannel(entry);
 
   if (!thread) {
@@ -521,7 +566,8 @@ const sendContactThreadMessage = async (entry, title, lines) => {
 
   await thread.send({
     flags: MessageFlags.IsComponentsV2,
-    components: buildContactThreadComponents(title, lines)
+    components: buildContactThreadComponents(title, lines, files.length > 0),
+    files
   });
 };
 
@@ -581,9 +627,12 @@ const forwardContactMessage = async (entry) => {
     throw new Error("Contact inbox channel is not configured.");
   }
 
+  const contactImageFile = imagePayloadToFile(entry.image, `contact-${entry.id}.png`);
+
   const message = await inboxChannel.send({
     flags: MessageFlags.IsComponentsV2,
-    components: buildContactInboxComponents(entry)
+    components: buildContactInboxComponents(entry),
+    files: contactImageFile ? [contactImageFile] : []
   });
 
   entry.inboxChannelId = inboxChannel.id;
@@ -603,7 +652,8 @@ const forwardContactMessage = async (entry) => {
         `**Name:** ${entry.name || "Not provided"}`,
         `**Discord:** ${entry.discordUsername}`,
         entry.message
-      ])
+      ], Boolean(contactImageFile)),
+      files: contactImageFile ? [contactImageFile] : []
     });
   }
 };
@@ -1014,6 +1064,7 @@ const requestHandler = async (req, res) => {
       const payload = JSON.parse(raw || "{}");
       const name = String(payload.name || "").trim();
       const message = String(payload.message || "").trim();
+      const image = payload.image && typeof payload.image === "object" ? payload.image : null;
 
       if (!message) {
         sendJson(400, { error: "Message is required." });
@@ -1031,7 +1082,8 @@ const requestHandler = async (req, res) => {
         createdAt: new Date().toISOString(),
         inboxChannelId: "",
         inboxMessageId: "",
-        threadChannelId: ""
+        threadChannelId: "",
+        image
       };
 
       await forwardContactMessage(entry);
@@ -1093,7 +1145,13 @@ client.on("messageCreate", async (message) => {
     storedEntry.lastUserReply = message.content;
     storedEntry.lastUserReplyAt = new Date().toISOString();
     writeContactMessages(contactData);
-    await sendContactThreadMessage(storedEntry, "User Reply", [message.content]);
+    const attachmentFiles = attachmentUrlFiles([...message.attachments.values()]);
+    await sendContactThreadMessage(
+      storedEntry,
+      "User Reply",
+      [message.content || "Image reply."],
+      attachmentFiles
+    );
     await syncContactInboxMessage(storedEntry);
   } catch (error) {
     console.error("DM relay failed:", error);
@@ -1118,6 +1176,14 @@ client.on("interactionCreate", async (interaction) => {
               .setStyle(TextInputStyle.Paragraph)
               .setRequired(true)
               .setMaxLength(1800)
+          ),
+          new ActionRowBuilder().addComponents(
+            new TextInputBuilder()
+              .setCustomId("reply_image_url")
+              .setLabel("Image URL")
+              .setStyle(TextInputStyle.Short)
+              .setRequired(false)
+              .setMaxLength(500)
           )
         );
 
@@ -1277,19 +1343,30 @@ client.on("interactionCreate", async (interaction) => {
       }
 
       const replyMessage = interaction.fields.getTextInputValue("reply_message").trim();
+      const replyImageUrl = interaction.fields.getTextInputValue("reply_image_url").trim();
       const user = await client.users.fetch(entry.discordUserId);
 
       await user.send({
         flags: MessageFlags.IsComponentsV2,
-        components: buildCommandBox("Reply from Crazyland", [replyMessage])
+        components: buildCommandBox("Reply from Crazyland", [
+          replyMessage,
+          ...(replyImageUrl ? ["**Image:** Attached below."] : [])
+        ]),
+        files: replyImageUrl ? [{ attachment: replyImageUrl, name: "reply-image" }] : []
       });
 
       entry.status = "Replied";
       entry.reply = replyMessage;
       entry.repliedAt = new Date().toISOString();
       entry.lastStaffReplyAt = entry.repliedAt;
+      entry.replyImageUrl = replyImageUrl;
       writeContactMessages(contactData);
-      await sendContactThreadMessage(entry, "Reply Sent", [replyMessage]);
+      await sendContactThreadMessage(
+        entry,
+        "Reply Sent",
+        [replyMessage],
+        replyImageUrl ? [{ attachment: replyImageUrl, name: "reply-image" }] : []
+      );
       await syncContactInboxMessage(entry);
       await interaction.reply({
         flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
