@@ -1,4 +1,5 @@
 import http from "node:http";
+import crypto from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -66,16 +67,23 @@ if (missingEnv.length > 0) {
 const config = {
   token: process.env.BOT_TOKEN,
   clientId: process.env.CLIENT_ID,
+  clientSecret: process.env.CLIENT_SECRET || "",
   guildId: process.env.GUILD_ID,
   dataFile: resolve(rootDir, process.env.GIVEAWAYS_FILE || "data/giveaways.json"),
   settingsFile: resolve(rootDir, process.env.BOT_SETTINGS_FILE || "data/bot-config.json"),
   contactFile: resolve(rootDir, process.env.CONTACT_MESSAGES_FILE || "data/contact-messages.json"),
   contactInboxChannelId: process.env.CONTACT_INBOX_CHANNEL_ID || "",
   port: Number(process.env.PORT || process.env.CONTACT_API_PORT || 3000),
+  authCallbackUrl: process.env.AUTH_CALLBACK_URL || "",
   defaultBannerUrl:
     process.env.DEFAULT_BANNER_URL ||
     "https://raw.githubusercontent.com/wobblingbottom/Crazyland-Webpage/main/banner.png"
 };
+
+const authStates = new Map();
+const authTokens = new Map();
+const AUTH_TOKEN_TTL_MS = 1000 * 60 * 60 * 24 * 7;
+const AUTH_STATE_TTL_MS = 1000 * 60 * 10;
 
 const NUMBER_EMOJIS = {
   "0": "<:Zero:1512353896318894110>",
@@ -92,6 +100,64 @@ const NUMBER_EMOJIS = {
 
 const emojifyDigits = (value) =>
   String(value).replace(/\d/g, (digit) => NUMBER_EMOJIS[digit] || digit);
+
+const createAuthToken = () => crypto.randomBytes(24).toString("hex");
+const createNonce = () => crypto.randomUUID();
+
+const cleanupAuthMaps = () => {
+  const now = Date.now();
+
+  for (const [state, entry] of authStates.entries()) {
+    if (entry.expiresAt <= now) {
+      authStates.delete(state);
+    }
+  }
+
+  for (const [token, entry] of authTokens.entries()) {
+    if (entry.expiresAt <= now) {
+      authTokens.delete(token);
+    }
+  }
+};
+
+const createAuthSession = (user) => {
+  const token = createAuthToken();
+  authTokens.set(token, {
+    ...user,
+    expiresAt: Date.now() + AUTH_TOKEN_TTL_MS
+  });
+  return token;
+};
+
+const readBearerToken = (req) => {
+  const header = req.headers.authorization || "";
+  if (!header.toLowerCase().startsWith("bearer ")) {
+    return "";
+  }
+  return header.slice(7).trim();
+};
+
+const getAuthSession = (req) => {
+  cleanupAuthMaps();
+  const token = readBearerToken(req);
+
+  if (!token) {
+    return null;
+  }
+
+  const session = authTokens.get(token);
+
+  if (!session) {
+    return null;
+  }
+
+  session.expiresAt = Date.now() + AUTH_TOKEN_TTL_MS;
+  authTokens.set(token, session);
+  return {
+    token,
+    session
+  };
+};
 
 const commands = [
   new SlashCommandBuilder()
@@ -449,6 +515,70 @@ const forwardContactMessage = async (entry) => {
   entry.inboxMessageId = message.id;
 };
 
+const exchangeDiscordCode = async (code) => {
+  const body = new URLSearchParams({
+    client_id: config.clientId,
+    client_secret: config.clientSecret,
+    grant_type: "authorization_code",
+    code,
+    redirect_uri: config.authCallbackUrl
+  });
+
+  const response = await fetch("https://discord.com/api/oauth2/token", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded"
+    },
+    body
+  });
+
+  if (!response.ok) {
+    throw new Error("Discord token exchange failed.");
+  }
+
+  return response.json();
+};
+
+const fetchDiscordIdentity = async (accessToken) => {
+  const response = await fetch("https://discord.com/api/users/@me", {
+    headers: {
+      Authorization: `Bearer ${accessToken}`
+    }
+  });
+
+  if (!response.ok) {
+    throw new Error("Discord identity lookup failed.");
+  }
+
+  return response.json();
+};
+
+const sendRedirect = (res, location) => {
+  res.writeHead(302, { Location: location });
+  res.end();
+};
+
+const sendHtml = (res, statusCode, html) => {
+  res.writeHead(statusCode, {
+    "Content-Type": "text/html; charset=utf-8"
+  });
+  res.end(html);
+};
+
+const buildAuthErrorPage = (message) => `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Discord Login Error</title>
+</head>
+<body>
+  <p>${message}</p>
+</body>
+</html>
+`;
+
 const getGiveawayChannel = async (fallbackChannelId) => {
   const settings = readSettings();
   const targetChannelId = settings.giveawayChannelId || fallbackChannelId;
@@ -655,27 +785,118 @@ const registerCommands = async () => {
 const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers] });
 
 const requestHandler = async (req, res) => {
+  cleanupAuthMaps();
   const sendJson = (statusCode, body) => {
     res.writeHead(statusCode, {
       "Content-Type": "application/json",
       "Access-Control-Allow-Origin": "*",
       "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type"
+      "Access-Control-Allow-Headers": "Content-Type, Authorization"
     });
     res.end(JSON.stringify(body));
   };
+
+  const requestUrl = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`);
 
   if (req.method === "OPTIONS") {
     sendJson(204, {});
     return;
   }
 
-  if (req.method === "GET" && req.url === "/api/contact") {
+  if (req.method === "GET" && requestUrl.pathname === "/auth/discord/login") {
+    if (!config.clientSecret || !config.authCallbackUrl) {
+      sendHtml(res, 500, buildAuthErrorPage("Discord login is not configured on the bot service."));
+      return;
+    }
+
+    const state = createNonce();
+    const redirectTarget = requestUrl.searchParams.get("redirect") || "";
+    authStates.set(state, {
+      redirectTarget,
+      expiresAt: Date.now() + AUTH_STATE_TTL_MS
+    });
+
+    const discordUrl = new URL("https://discord.com/oauth2/authorize");
+    discordUrl.searchParams.set("client_id", config.clientId);
+    discordUrl.searchParams.set("response_type", "code");
+    discordUrl.searchParams.set("scope", "identify");
+    discordUrl.searchParams.set("redirect_uri", config.authCallbackUrl);
+    discordUrl.searchParams.set("state", state);
+    discordUrl.searchParams.set("prompt", "consent");
+    sendRedirect(res, discordUrl.toString());
+    return;
+  }
+
+  if (req.method === "GET" && requestUrl.pathname === "/auth/discord/callback") {
+    const code = requestUrl.searchParams.get("code") || "";
+    const state = requestUrl.searchParams.get("state") || "";
+    const authState = authStates.get(state);
+
+    if (!code || !authState) {
+      sendHtml(res, 400, buildAuthErrorPage("Discord login could not be completed."));
+      return;
+    }
+
+    authStates.delete(state);
+
+    try {
+      const tokenData = await exchangeDiscordCode(code);
+      const identity = await fetchDiscordIdentity(tokenData.access_token);
+      const token = createAuthSession({
+        discordUserId: identity.id,
+        username: identity.username || "",
+        globalName: identity.global_name || "",
+        avatar: identity.avatar || ""
+      });
+      const redirectTarget = authState.redirectTarget || "/";
+      const redirectUrl = new URL(redirectTarget);
+      redirectUrl.searchParams.set("discord_token", token);
+      sendRedirect(res, redirectUrl.toString());
+    } catch (error) {
+      console.error("Discord auth callback failed:", error);
+      sendHtml(res, 500, buildAuthErrorPage("Discord login failed."));
+    }
+
+    return;
+  }
+
+  if (req.method === "GET" && requestUrl.pathname === "/api/contact") {
     sendJson(200, { ok: true });
     return;
   }
 
-  if (req.method !== "POST" || req.url !== "/api/contact") {
+  if (req.method === "GET" && requestUrl.pathname === "/api/contact/me") {
+    const auth = getAuthSession(req);
+
+    if (!auth) {
+      sendJson(401, { error: "Login required." });
+      return;
+    }
+
+    sendJson(200, {
+      ok: true,
+      user: {
+        discordUserId: auth.session.discordUserId,
+        username: auth.session.username,
+        globalName: auth.session.globalName,
+        avatar: auth.session.avatar
+      }
+    });
+    return;
+  }
+
+  if (req.method === "POST" && requestUrl.pathname === "/api/contact/logout") {
+    const auth = getAuthSession(req);
+
+    if (auth) {
+      authTokens.delete(auth.token);
+    }
+
+    sendJson(200, { ok: true });
+    return;
+  }
+
+  if (req.method !== "POST" || requestUrl.pathname !== "/api/contact") {
     sendJson(404, { error: "Not found." });
     return;
   }
@@ -687,22 +908,19 @@ const requestHandler = async (req, res) => {
 
   req.on("end", async () => {
     try {
-      const payload = JSON.parse(raw || "{}");
-      const name = String(payload.name || "").trim();
-      const discordUsername = String(payload.discordUsername || "").trim();
-      const message = String(payload.message || "").trim();
+      const auth = getAuthSession(req);
 
-      if (!discordUsername || !message) {
-        sendJson(400, { error: "Discord username and message are required." });
+      if (!auth) {
+        sendJson(401, { error: "Login required." });
         return;
       }
 
-      const member = await findGuildMemberByDiscordName(discordUsername);
+      const payload = JSON.parse(raw || "{}");
+      const name = String(payload.name || "").trim();
+      const message = String(payload.message || "").trim();
 
-      if (!member) {
-        sendJson(400, {
-          error: "Discord username could not be matched in the server. Use your exact server username/display name."
-        });
+      if (!message) {
+        sendJson(400, { error: "Message is required." });
         return;
       }
 
@@ -710,8 +928,8 @@ const requestHandler = async (req, res) => {
       const entry = {
         id: createContactId(),
         name,
-        discordUsername,
-        discordUserId: member.id,
+        discordUsername: auth.session.globalName || auth.session.username,
+        discordUserId: auth.session.discordUserId,
         message,
         status: "Open",
         createdAt: new Date().toISOString(),

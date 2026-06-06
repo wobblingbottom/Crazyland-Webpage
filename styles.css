@@ -578,6 +578,21 @@ body.dark-mode .theme-toggle::before {
   margin: 0;
 }
 
+.contact-auth-card {
+  display: grid;
+  gap: 1rem;
+}
+
+.contact-auth-status {
+  margin: 0;
+}
+
+.contact-auth-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
 .section-heading {
   margin-bottom: 1rem;
   display: grid;

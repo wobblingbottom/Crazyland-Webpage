@@ -3,6 +3,9 @@ const audioToggle = document.querySelector(".audio-toggle");
 const backgroundAudio = document.querySelector(".background-audio");
 const contactForm = document.querySelector(".contact-form");
 const formNote = document.querySelector(".form-note");
+const contactAuthStatus = document.querySelector(".contact-auth-status");
+const discordLoginButton = document.querySelector("[data-discord-login]");
+const discordLogoutButton = document.querySelector("[data-discord-logout]");
 const autoGrowTextareas = document.querySelectorAll("textarea");
 const contactMethodInputs = document.querySelectorAll('input[name="contact_method"]');
 const contactOptions = document.querySelectorAll("[data-contact-option]");
@@ -18,6 +21,8 @@ const contactApiMeta = document.querySelector('meta[name="contact-api-url"]');
 const themeStorageKey = "crazyland-theme";
 const audioStorageKey = "crazyland-audio";
 const audioTimeStorageKey = "crazyland-audio-time";
+const contactTokenStorageKey = "crazyland-contact-token";
+let contactAuthToken = window.localStorage.getItem(contactTokenStorageKey) || "";
 const createDotSnowfield = () => {
   const snowfield = document.createElement("div");
   snowfield.className = "dot-snowfield";
@@ -179,12 +184,93 @@ window.addEventListener("beforeunload", () => {
   }
 });
 
+const getContactApiBase = () => {
+  const endpoint = contactApiMeta?.content?.trim();
+
+  if (!endpoint || endpoint.includes("your-bot-service")) {
+    return "";
+  }
+
+  return endpoint.replace(/\/api\/contact\/?$/, "");
+};
+
+const setContactAuthState = (user) => {
+  if (!contactAuthStatus || !discordLoginButton || !discordLogoutButton || !contactForm) {
+    return;
+  }
+
+  if (user) {
+    const displayName = user.globalName || user.username || "Discord user";
+    contactAuthStatus.textContent = `Logged in as ${displayName}.`;
+    discordLoginButton.hidden = true;
+    discordLogoutButton.hidden = false;
+    contactForm.hidden = false;
+  } else {
+    contactAuthStatus.textContent = "Log in with Discord to send a message.";
+    discordLoginButton.hidden = false;
+    discordLogoutButton.hidden = true;
+    contactForm.hidden = true;
+  }
+};
+
+const syncContactAuth = async () => {
+  if (!contactAuthStatus || !contactForm) {
+    return;
+  }
+
+  const apiBase = getContactApiBase();
+
+  if (!apiBase) {
+    contactAuthStatus.textContent = "Set your bot API URL first.";
+    return;
+  }
+
+  if (!contactAuthToken) {
+    setContactAuthState(null);
+    return;
+  }
+
+  try {
+    const response = await fetch(`${apiBase}/api/contact/me`, {
+      headers: {
+        Authorization: `Bearer ${contactAuthToken}`
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error("Login required.");
+    }
+
+    const payload = await response.json();
+    setContactAuthState(payload.user);
+  } catch {
+    contactAuthToken = "";
+    window.localStorage.removeItem(contactTokenStorageKey);
+    setContactAuthState(null);
+  }
+};
+
+const handleDiscordTokenFromUrl = () => {
+  const params = new URLSearchParams(window.location.search);
+  const token = params.get("discord_token");
+
+  if (!token) {
+    return;
+  }
+
+  contactAuthToken = token;
+  window.localStorage.setItem(contactTokenStorageKey, token);
+  params.delete("discord_token");
+  const nextQuery = params.toString();
+  const nextUrl = `${window.location.pathname}${nextQuery ? `?${nextQuery}` : ""}${window.location.hash}`;
+  window.history.replaceState({}, "", nextUrl);
+};
+
 contactForm?.addEventListener("submit", (event) => {
   event.preventDefault();
 
   const endpoint = contactApiMeta?.content?.trim();
   const name = contactForm.elements.namedItem("name")?.value.trim();
-  const discordUsername = contactForm.elements.namedItem("discord_username")?.value.trim();
   const message = contactForm.elements.namedItem("message")?.value.trim();
 
   if (!endpoint || endpoint.includes("your-bot-service")) {
@@ -192,8 +278,13 @@ contactForm?.addEventListener("submit", (event) => {
     return;
   }
 
-  if (!discordUsername || !message) {
-    formNote.textContent = "Add your Discord username and message.";
+  if (!contactAuthToken) {
+    formNote.textContent = "Log in with Discord first.";
+    return;
+  }
+
+  if (!message) {
+    formNote.textContent = "Add your message.";
     return;
   }
 
@@ -202,11 +293,11 @@ contactForm?.addEventListener("submit", (event) => {
   fetch(endpoint, {
     method: "POST",
     headers: {
-      "Content-Type": "application/json"
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${contactAuthToken}`
     },
     body: JSON.stringify({
       name,
-      discordUsername,
       message
     })
   })
@@ -223,6 +314,44 @@ contactForm?.addEventListener("submit", (event) => {
     .catch((error) => {
       formNote.textContent = error.message || "Message failed.";
     });
+});
+
+discordLoginButton?.addEventListener("click", () => {
+  const apiBase = getContactApiBase();
+
+  if (!apiBase) {
+    if (contactAuthStatus) {
+      contactAuthStatus.textContent = "Set your bot API URL first.";
+    }
+    return;
+  }
+
+  const redirect = encodeURIComponent(window.location.href);
+  window.location.href = `${apiBase}/auth/discord/login?redirect=${redirect}`;
+});
+
+discordLogoutButton?.addEventListener("click", async () => {
+  const apiBase = getContactApiBase();
+
+  try {
+    if (apiBase && contactAuthToken) {
+      await fetch(`${apiBase}/api/contact/logout`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${contactAuthToken}`
+        }
+      });
+    }
+  } catch {
+    // Ignore logout transport failures and clear local state anyway.
+  }
+
+  contactAuthToken = "";
+  window.localStorage.removeItem(contactTokenStorageKey);
+  setContactAuthState(null);
+  if (formNote) {
+    formNote.textContent = "";
+  }
 });
 
 const renderGiveawayFeed = async () => {
@@ -285,3 +414,5 @@ contactMethodInputs.forEach((input) => {
 
 const selectedContactMethod = [...contactMethodInputs].find((input) => input.checked)?.value || "website";
 applyContactMethod(selectedContactMethod);
+handleDiscordTokenFromUrl();
+syncContactAuth();

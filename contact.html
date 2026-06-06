@@ -38,26 +38,22 @@
       <section class="contact-page-card page-transition-target" aria-label="Contact form">
         <div class="contact-page-copy">
           <h1>Contact</h1>
-          <p>Send a message here and the Discord bot will forward it.</p>
-          <p>Your Discord username is required so I can reply back through the bot.</p>
+          <p>Log in with Discord first, then send a message here and the bot will forward it.</p>
+          <p>I will reply back through the bot to the Discord account you used to log in.</p>
         </div>
 
-        <form class="contact-form" data-contact-endpoint autocomplete="off">
+        <div class="contact-auth-card">
+          <p class="contact-auth-status" aria-live="polite">Checking login...</p>
+          <div class="contact-auth-actions">
+            <button class="button" type="button" data-discord-login>Log In With Discord</button>
+            <button class="button" type="button" data-discord-logout hidden>Log Out</button>
+          </div>
+        </div>
+
+        <form class="contact-form" data-contact-endpoint autocomplete="off" hidden>
           <label>
             Name
             <input type="text" name="name" placeholder="Your name" autocomplete="off" spellcheck="false">
-          </label>
-          <label class="full-width">
-            Discord Username
-            <input
-              type="text"
-              name="discord_username"
-              placeholder="yourusername"
-              autocomplete="off"
-              autocapitalize="off"
-              autocorrect="off"
-              spellcheck="false"
-            >
           </label>
           <label class="full-width">
             Message
