@@ -15,6 +15,7 @@ import {
   MediaGalleryBuilder,
   MessageFlags,
   ModalBuilder,
+  Partials,
   REST,
   Routes,
   SectionBuilder,
@@ -453,6 +454,37 @@ const buildContactInboxComponents = (entry) => {
   return [container, buttons];
 };
 
+const buildContactReturnComponents = (entry, messageText) => {
+  const container = new ContainerBuilder();
+  container.addTextDisplayComponents(
+    new TextDisplayBuilder().setContent("### Discord Reply")
+  );
+  container.addSeparatorComponents(new SeparatorBuilder().setDivider(true));
+  container.addTextDisplayComponents(
+    new TextDisplayBuilder().setContent(`**From:** ${entry.discordUsername}`),
+    new TextDisplayBuilder().setContent(`**Contact:** ${entry.id}`),
+    new TextDisplayBuilder().setContent(`**Received:** <t:${Math.floor(Date.now() / 1000)}:f>`),
+    new TextDisplayBuilder().setContent(messageText)
+  );
+  return [container];
+};
+
+const buildContactThreadComponents = (title, lines = []) => {
+  const container = new ContainerBuilder();
+  container.addTextDisplayComponents(
+    new TextDisplayBuilder().setContent(`### ${title}`)
+  );
+
+  if (lines.length > 0) {
+    container.addSeparatorComponents(new SeparatorBuilder().setDivider(true));
+    container.addTextDisplayComponents(
+      ...lines.map((line) => new TextDisplayBuilder().setContent(line))
+    );
+  }
+
+  return [container];
+};
+
 const syncContactInboxMessage = async (entry) => {
   if (!entry.inboxChannelId || !entry.inboxMessageId) {
     return;
@@ -471,6 +503,28 @@ const syncContactInboxMessage = async (entry) => {
   });
 };
 
+const getContactThreadChannel = async (entry) => {
+  if (!entry.threadChannelId) {
+    return null;
+  }
+
+  const channel = await client.channels.fetch(entry.threadChannelId).catch(() => null);
+  return channel?.isTextBased() ? channel : null;
+};
+
+const sendContactThreadMessage = async (entry, title, lines) => {
+  const thread = await getContactThreadChannel(entry);
+
+  if (!thread) {
+    return;
+  }
+
+  await thread.send({
+    flags: MessageFlags.IsComponentsV2,
+    components: buildContactThreadComponents(title, lines)
+  });
+};
+
 const getContactInboxChannel = async () => {
   if (!config.contactInboxChannelId) {
     return null;
@@ -478,6 +532,27 @@ const getContactInboxChannel = async () => {
 
   const channel = await client.channels.fetch(config.contactInboxChannelId);
   return channel?.isTextBased() ? channel : null;
+};
+
+const findLatestContactEntryByUserId = (discordUserId) => {
+  const contactData = readContactMessages();
+  const matches = contactData.messages.filter((entry) => entry.discordUserId === discordUserId);
+
+  if (matches.length === 0) {
+    return null;
+  }
+
+  const prioritized = [...matches].sort((left, right) => {
+    const leftStamp = new Date(
+      left.lastStaffReplyAt || left.lastUserReplyAt || left.repliedAt || left.createdAt
+    ).getTime();
+    const rightStamp = new Date(
+      right.lastStaffReplyAt || right.lastUserReplyAt || right.repliedAt || right.createdAt
+    ).getTime();
+    return rightStamp - leftStamp;
+  });
+
+  return prioritized.find((entry) => entry.status !== "Closed") || prioritized[0] || null;
 };
 
 const findGuildMemberByDiscordName = async (discordUsername) => {
@@ -513,6 +588,24 @@ const forwardContactMessage = async (entry) => {
 
   entry.inboxChannelId = inboxChannel.id;
   entry.inboxMessageId = message.id;
+
+  if ("startThread" in message) {
+    const thread = await message.startThread({
+      name: `contact-${entry.id}`,
+      autoArchiveDuration: 1440
+    });
+
+    entry.threadChannelId = thread.id;
+
+    await thread.send({
+      flags: MessageFlags.IsComponentsV2,
+      components: buildContactThreadComponents("Website Contact Opened", [
+        `**Name:** ${entry.name || "Not provided"}`,
+        `**Discord:** ${entry.discordUsername}`,
+        entry.message
+      ])
+    });
+  }
 };
 
 const exchangeDiscordCode = async (code) => {
@@ -782,7 +875,10 @@ const registerCommands = async () => {
   );
 };
 
-const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers] });
+const client = new Client({
+  intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers, GatewayIntentBits.DirectMessages],
+  partials: [Partials.Channel]
+});
 
 const requestHandler = async (req, res) => {
   cleanupAuthMaps();
@@ -934,7 +1030,8 @@ const requestHandler = async (req, res) => {
         status: "Open",
         createdAt: new Date().toISOString(),
         inboxChannelId: "",
-        inboxMessageId: ""
+        inboxMessageId: "",
+        threadChannelId: ""
       };
 
       await forwardContactMessage(entry);
@@ -971,6 +1068,47 @@ client.once("clientReady", () => {
       console.error("Automatic giveaway close failed:", error);
     });
   }, 15_000);
+});
+
+client.on("messageCreate", async (message) => {
+  try {
+    if (message.author.bot || message.guildId) {
+      return;
+    }
+
+    const entry = findLatestContactEntryByUserId(message.author.id);
+
+    if (!entry) {
+      return;
+    }
+
+    const inboxChannel = await getContactInboxChannel();
+
+    if (!inboxChannel) {
+      return;
+    }
+
+    await inboxChannel.send({
+      flags: MessageFlags.IsComponentsV2,
+      components: buildContactReturnComponents(entry, message.content)
+    });
+
+    const contactData = readContactMessages();
+    const storedEntry = contactData.messages.find((item) => item.id === entry.id);
+
+    if (!storedEntry) {
+      return;
+    }
+
+    storedEntry.status = "User Replied";
+    storedEntry.lastUserReply = message.content;
+    storedEntry.lastUserReplyAt = new Date().toISOString();
+    writeContactMessages(contactData);
+    await sendContactThreadMessage(storedEntry, "User Reply", [message.content]);
+    await syncContactInboxMessage(storedEntry);
+  } catch (error) {
+    console.error("DM relay failed:", error);
+  }
 });
 
 client.on("interactionCreate", async (interaction) => {
@@ -1160,7 +1298,9 @@ client.on("interactionCreate", async (interaction) => {
       entry.status = "Replied";
       entry.reply = replyMessage;
       entry.repliedAt = new Date().toISOString();
+      entry.lastStaffReplyAt = entry.repliedAt;
       writeContactMessages(contactData);
+      await sendContactThreadMessage(entry, "Reply Sent", [replyMessage]);
       await syncContactInboxMessage(entry);
       await interaction.reply({
         flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
