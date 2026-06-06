@@ -1082,17 +1082,6 @@ client.on("messageCreate", async (message) => {
       return;
     }
 
-    const inboxChannel = await getContactInboxChannel();
-
-    if (!inboxChannel) {
-      return;
-    }
-
-    await inboxChannel.send({
-      flags: MessageFlags.IsComponentsV2,
-      components: buildContactReturnComponents(entry, message.content)
-    });
-
     const contactData = readContactMessages();
     const storedEntry = contactData.messages.find((item) => item.id === entry.id);
 
