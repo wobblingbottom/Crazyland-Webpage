@@ -258,14 +258,16 @@ const setContactAuthState = (user) => {
 };
 
 const syncContactAuth = async () => {
-  if (!contactAuthStatus || !contactForm) {
+  if (!contactAuthStatus && discordLoginButtons.length === 0) {
     return;
   }
 
   const apiBase = getContactApiBase();
 
   if (!apiBase) {
-    contactAuthStatus.textContent = "Set your bot API URL first.";
+    if (contactAuthStatus) {
+      contactAuthStatus.textContent = "Set your bot API URL first.";
+    }
     return;
   }
 
