@@ -4,7 +4,8 @@ const backgroundAudio = document.querySelector(".background-audio");
 const contactForm = document.querySelector(".contact-form");
 const formNote = document.querySelector(".form-note");
 const contactAuthStatus = document.querySelector(".contact-auth-status");
-const discordLoginButton = document.querySelector("[data-discord-login]");
+const discordLoginButtons = document.querySelectorAll("[data-discord-login]");
+const discordLoginGateButton = document.querySelector("[data-discord-login-gate]");
 const discordLogoutButton = document.querySelector("[data-discord-logout]");
 const fileUploadInput = document.querySelector(".file-upload-input");
 const fileUploadName = document.querySelector(".file-upload-name");
@@ -203,20 +204,31 @@ const getContactApiBase = () => {
   return endpoint.replace(/\/api\/contact\/?$/, "");
 };
 
+const applyDiscordLoginButtons = (user) => {
+  discordLoginButtons.forEach((button) => {
+    button.textContent = user ? "Discord Connected" : "Discord Login";
+    button.setAttribute("aria-pressed", String(Boolean(user)));
+  });
+
+  if (discordLoginGateButton) {
+    discordLoginGateButton.hidden = Boolean(user);
+  }
+};
+
 const setContactAuthState = (user) => {
-  if (!contactAuthStatus || !discordLoginButton || !discordLogoutButton || !contactForm) {
+  applyDiscordLoginButtons(user);
+
+  if (!contactAuthStatus || !discordLogoutButton || !contactForm) {
     return;
   }
 
   if (user) {
     const displayName = user.globalName || user.username || "Discord user";
     contactAuthStatus.textContent = `Logged in as ${displayName}.`;
-    discordLoginButton.hidden = true;
     discordLogoutButton.hidden = false;
     contactForm.hidden = false;
   } else {
     contactAuthStatus.textContent = "Log in with Discord to send a message.";
-    discordLoginButton.hidden = false;
     discordLogoutButton.hidden = true;
     contactForm.hidden = true;
   }
@@ -352,7 +364,23 @@ contactForm?.addEventListener("submit", async (event) => {
     });
 });
 
-discordLoginButton?.addEventListener("click", () => {
+discordLoginButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    const apiBase = getContactApiBase();
+
+    if (!apiBase) {
+      if (contactAuthStatus) {
+        contactAuthStatus.textContent = "Set your bot API URL first.";
+      }
+      return;
+    }
+
+    const redirect = encodeURIComponent(window.location.href);
+    window.location.href = `${apiBase}/auth/discord/login?redirect=${redirect}`;
+  });
+});
+
+discordLoginGateButton?.addEventListener("click", () => {
   const apiBase = getContactApiBase();
 
   if (!apiBase) {

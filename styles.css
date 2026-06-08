@@ -1,6 +1,6 @@
 :root {
   --bg: #ffffff;
-  --surface: #ffffff;
+  --surface: #FFE0E6;
   --text: #f45f77;
   --copy: #7f7f7f;
   --border: #f45f77;
@@ -8,7 +8,7 @@
 }
 
 body.dark-mode {
-  --bg: #f45f77;
+  --bg: #AA293D;
   --surface: #f45f77;
   --text: #ffffff;
   --copy: rgba(255, 255, 255, 0.78);
