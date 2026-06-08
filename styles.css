@@ -316,6 +316,21 @@ body.dark-mode .theme-toggle::before {
   background-image: url("./Sun.png");
 }
 
+.discord-login-avatar {
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 999px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.discord-login-name {
+  max-width: 9rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .button-secondary,
 .filter-button.active {
   background: var(--text);

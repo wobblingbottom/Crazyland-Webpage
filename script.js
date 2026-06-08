@@ -204,9 +204,32 @@ const getContactApiBase = () => {
   return endpoint.replace(/\/api\/contact\/?$/, "");
 };
 
+const getDiscordAvatarUrl = (user) => {
+  if (!user?.discordUserId || !user?.avatar) {
+    return "";
+  }
+
+  return `https://cdn.discordapp.com/avatars/${user.discordUserId}/${user.avatar}.png?size=64`;
+};
+
 const applyDiscordLoginButtons = (user) => {
   discordLoginButtons.forEach((button) => {
-    button.textContent = user ? "Discord Connected" : "Discord Login";
+    if (user) {
+      const displayName = user.globalName || user.username || "Discord";
+      const avatarUrl = getDiscordAvatarUrl(user);
+
+      button.innerHTML = `
+        ${avatarUrl ? `<img class="discord-login-avatar" src="${avatarUrl}" alt="">` : ""}
+        <span class="discord-login-name">${displayName}</span>
+      `;
+      button.setAttribute("title", displayName);
+      button.setAttribute("aria-label", displayName);
+    } else {
+      button.textContent = "Discord Login";
+      button.setAttribute("title", "Discord Login");
+      button.setAttribute("aria-label", "Discord Login");
+    }
+
     button.setAttribute("aria-pressed", String(Boolean(user)));
   });
 
