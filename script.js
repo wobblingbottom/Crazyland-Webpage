@@ -9,6 +9,7 @@ const commissionForm = document.querySelector('[data-commission-form]');
 const commissionCloseTargets = document.querySelectorAll('[data-commission-close]');
 const commissionRequestTitle = document.querySelector('[data-commission-request-title]');
 const commissionRequestPrice = document.querySelector('[data-commission-request-price]');
+const commissionRequestLink = document.querySelector('[data-commission-request-link]');
 const commissionFormMessage = document.querySelector('[data-commission-form-message]');
 const commissionModalDescription = document.querySelector('[data-commission-modal-description]');
 const commissionModalImage = document.querySelector('[data-commission-modal-image]');
@@ -428,6 +429,17 @@ function openCommissionModal() {
 
   if (commissionRequestPrice) {
     commissionRequestPrice.textContent = selectedOffering.estimatePrice || 'Price on request';
+  }
+
+  if (commissionRequestLink instanceof HTMLAnchorElement) {
+    const privateChatUrl = typeof selectedOffering.privateChatUrl === 'string' ? selectedOffering.privateChatUrl.trim() : '';
+    commissionRequestLink.hidden = !privateChatUrl;
+
+    if (privateChatUrl) {
+      commissionRequestLink.href = privateChatUrl;
+    } else {
+      commissionRequestLink.removeAttribute('href');
+    }
   }
 
   if (commissionModalDescription) {
@@ -1190,6 +1202,21 @@ function createCommissionTypeCard(offering) {
   description.className = 'commission-type-description';
   renderFormattedDescription(description, offering.description || '');
   copy.appendChild(description);
+
+  const privateChatUrl = typeof offering.privateChatUrl === 'string' ? offering.privateChatUrl.trim() : '';
+
+  if (privateChatUrl) {
+    const link = document.createElement('a');
+    link.className = 'commission-type-link';
+    link.href = privateChatUrl;
+    link.target = '_blank';
+    link.rel = 'noreferrer';
+    link.textContent = 'Open private chat / commission site';
+    link.addEventListener('click', (event) => {
+      event.stopPropagation();
+    });
+    copy.appendChild(link);
+  }
 
   card.appendChild(copy);
   return card;

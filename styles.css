@@ -1157,6 +1157,38 @@ button {
   text-align: center;
 }
 
+.commission-request-link,
+.commission-type-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  border: 1px solid #574d44;
+  border-radius: 10px;
+  background: #badfe8;
+  color: #1b1b1b;
+  cursor: pointer;
+  font: inherit;
+  line-height: 1.2;
+  padding: 8px 14px;
+  text-align: center;
+  text-decoration: none;
+}
+
+.commission-request-link {
+  width: 100%;
+  margin: 14px 0 18px;
+}
+
+.commission-request-link[hidden] {
+  display: none;
+}
+
+.commission-type-link {
+  align-self: flex-start;
+  margin-top: 14px;
+}
+
 .commission-form {
   display: grid;
   gap: 14px;

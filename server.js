@@ -289,6 +289,7 @@ async function readCommissionOfferings() {
     description: "",
     estimatePrice: "",
     notes: "",
+    privateChatUrl: "",
     exampleImageUrl: "",
     status: "open",
     ...offering,
@@ -310,6 +311,7 @@ function normalizeCommissionOfferingInput(input) {
   const description = String(input.description || "").trim().slice(0, 800);
   const estimatePrice = String(input.estimatePrice || "").trim().slice(0, 80);
   const notes = String(input.notes || "").trim().slice(0, 400);
+  const privateChatUrl = String(input.privateChatUrl || "").trim().slice(0, 500);
   const status = input.status === "closed" ? "closed" : "open";
 
   if (!title || !description || !estimatePrice) {
@@ -322,6 +324,7 @@ function normalizeCommissionOfferingInput(input) {
       description,
       estimatePrice,
       notes,
+      privateChatUrl,
       status
     }
   };
@@ -2132,6 +2135,10 @@ app.get("/admin/commissions", ensureConfigured, requireAdmin, (req, res) => {
                 <textarea name="notes" maxlength="400" placeholder="Rules, delivery notes, what is included..."></textarea>
               </label>
               <label>
+                Private chat / commission site link
+                <input name="privateChatUrl" maxlength="500" placeholder="https://..." />
+              </label>
+              <label>
                 Example images
                 <input name="exampleImages" type="file" accept="image/*" multiple />
               </label>
@@ -2313,6 +2320,7 @@ app.get("/admin/commissions", ensureConfigured, requireAdmin, (req, res) => {
                 </p>
                 <p class="offering-description">\${escapeText(offering.description)}</p>
                 \${offering.notes ? \`<p class="offering-meta">Notes: \${escapeText(offering.notes)}</p>\` : ""}
+                \${offering.privateChatUrl ? \`<p class="commission-link"><a href="\${escapeText(offering.privateChatUrl)}" target="_blank" rel="noreferrer">Open private chat / commission site</a></p>\` : ""}
               </div>
               <div class="offering-actions">
                 <button class="secondary" type="button" data-offering-action="edit" data-id="\${offering.id}">Edit</button>
@@ -2337,6 +2345,7 @@ app.get("/admin/commissions", ensureConfigured, requireAdmin, (req, res) => {
         payload.append("description", offering.description);
         payload.append("estimatePrice", offering.estimatePrice);
         payload.append("notes", offering.notes || "");
+        payload.append("privateChatUrl", offering.privateChatUrl || "");
         payload.append("status", offering.status);
         payload.append("exampleImageOrder", JSON.stringify(getOfferingImageOrder(grid)));
 
@@ -2459,6 +2468,7 @@ app.get("/admin/commissions", ensureConfigured, requireAdmin, (req, res) => {
           offeringForm.elements.description.value = offering.description;
           offeringForm.elements.estimatePrice.value = offering.estimatePrice;
           offeringForm.elements.notes.value = offering.notes || "";
+          offeringForm.elements.privateChatUrl.value = offering.privateChatUrl || "";
           offeringForm.elements.status.value = offering.status;
           offeringForm.elements.exampleImages.value = "";
           offeringFormTitle.textContent = "Edit commission offering";
